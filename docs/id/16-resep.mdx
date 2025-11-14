@@ -1,0 +1,140 @@
+---
+id: recipes
+slug: /recipes
+sidebar_position: 16
+---
+
+# Resep
+
+## API paginasi
+**Masalah:** Anda membutuhkan respons paginasi konsisten di seluruh modul.
+
+**Solusi:** Gunakan plugin paginasi Knex dan bungkus hasilnya dalam DTO.
+
+```ts
+// app/modules/users/services/list-users.service.ts
+import {injectable} from '../../../core/container/decorators';
+import {UserModel} from '../models/user.model';
+
+@injectable()
+export class ListUsersService {
+  constructor(private readonly users: UserModel) {}
+
+  async execute(page = 1, perPage = 25) {
+    const result = await this.users.findAll(page, perPage);
+    return {
+      data: result.data,
+      meta: result.pagination,
+    };
+  }
+}
+```
+
+Expose metadata di controller:
+
+```ts
+res.json({data: users.data, meta: users.meta});
+```
+
+## Upload file ke S3
+**Masalah:** Menerima file dan mengalirkannya ke object storage tanpa memblokir event loop.
+
+**Solusi:** Gunakan middleware upload dan klien S3 yang terdaftar di container.
+
+```ts
+// app/modules/files/http/controllers/uploads.controller.ts
+import {Request, Response} from 'express';
+import {S3Client} from '@aws-sdk/client-s3';
+import {container} from '../../../../core/container/application-container';
+
+export class UploadsController {
+  async store(req: Request, res: Response) {
+    const file = req.file!; // multer menyuntikkan file
+    const s3 = container.resolve<S3Client>('S3Client');
+
+    await s3.putObject({
+      Bucket: process.env.AWS_BUCKET!,
+      Key: `uploads/${file.originalname}`,
+      Body: file.buffer,
+      ContentType: file.mimetype,
+    });
+
+    res.status(201).json({path: `uploads/${file.originalname}`});
+  }
+}
+```
+
+Daftarkan middleware:
+
+```ts
+router.post('/uploads', upload.single('file'), controller.store.bind(controller));
+```
+
+## Background job
+**Masalah:** Memindahkan operasi lama (email, pembuatan laporan) ke proses terpisah.
+
+**Solusi:** Gunakan provider queue di `core/queues/bullmq.provider.ts`.
+
+```ts
+// app/modules/reports/services/report-job.service.ts
+import {injectable, inject} from '../../../core/container/decorators';
+import {Queue} from 'bullmq';
+
+@injectable()
+export class ReportJobService {
+  constructor(@inject('Queues.reports') private readonly queue: Queue) {}
+
+  async enqueue(payload: {reportId: string}) {
+    await this.queue.add('generate-report', payload, {
+      attempts: 3,
+      backoff: {type: 'exponential', delay: 5000},
+    });
+  }
+}
+```
+
+Contoh worker:
+
+```ts
+// app/modules/reports/workers/report.worker.ts
+import {workerFactory} from '../../../core/queues/worker.factory';
+
+export default workerFactory('Queues.reports', async job => {
+  // generate report
+});
+```
+
+## Caching respons
+**Masalah:** Mengurangi load dari query mahal.
+
+**Solusi:** Daftarkan provider cache (Redis) dan bungkus pemanggilan service.
+
+```ts
+@injectable()
+export class CachedProductService {
+  constructor(
+    private readonly products: ProductModel,
+    @inject('CacheManager') private readonly cache: CacheManager,
+  ) {}
+
+  async getById(id: string) {
+    return this.cache.remember(`products:${id}`, 60, () => this.products.findById(id));
+  }
+}
+```
+
+## Otomasi CLI untuk rilis
+**Masalah:** Menjamin proses rilis menaikkan versi dan membuat changelog.
+
+**Solusi:** Buat perintah CLI kustom yang membungkus proses rilis.
+
+```ts
+export default new Command('release')
+  .description('Cut a release with changelog')
+  .action(async ({shell}) => {
+    await shell.run('npm run lint');
+    await shell.run('npm test');
+    await shell.run('changeset version');
+    await shell.run('git push --follow-tags');
+  });
+```

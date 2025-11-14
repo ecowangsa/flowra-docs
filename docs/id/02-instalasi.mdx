@@ -1,0 +1,92 @@
+---
+id: installation
+slug: /getting-started/installation
+sidebar_position: 2
+---
+
+# Instalasi & Persiapan
+
+## Prasyarat
+| Kebutuhan | Versi | Catatan |
+| --------- | ----- | ------- |
+| Node.js | >= 20.0 | Flowra memanfaatkan fitur JavaScript modern dan native fetch. |
+| npm | >= 10.0 | Yarn dan pnpm juga berfungsi; contoh menggunakan npm. |
+| OS | macOS, Linux, Windows | CLI diuji di shell populer (bash, zsh, PowerShell). |
+
+> **tip**
+> Aktifkan build incremental TypeScript (`tsc --watch`) untuk feedback cepat saat memakai generator CLI Flowra.
+
+## Instalasi CLI
+Anda bisa memasang Flowra secara global atau menjalankannya via `npx` saat dibutuhkan.
+
+```bash
+npm install -g flowra
+flowra --help
+```
+
+Untuk lingkungan yang bisa direproduksi—pipeline CI atau proyek tim—lebih baik pasang sebagai dev dependency lokal:
+
+```bash
+npm install --save-dev flowra
+npx flowra --help
+```
+
+## Membuat aplikasi baru
+Cara tercepat memulai adalah perintah `create-app`. Generator ini menyalin template dari kode sumber Flowra dan menyiapkan TypeScript, linting, serta default testing.
+
+```bash
+npx flowra create-app retail-api
+cd retail-api
+npm install
+```
+
+Generator akan membuat struktur berikut:
+
+```text
+retail-api/
+├─ app/
+│  ├─ modules/
+│  │  └─ example/
+│  │     ├─ http/
+│  │     │  ├─ controllers/
+│  │     │  └─ routes.ts
+│  │     ├─ services/
+│  │     └─ validators/
+├─ bin/
+│  └─ flowra.ts
+├─ core/
+│  ├─ container/
+│  ├─ config/
+│  ├─ http/
+│  ├─ knex/
+│  └─ testing/
+├─ main/
+│  └─ bootstrap.ts
+├─ public/
+├─ resources/
+│  └─ views/
+├─ orm.cli.config.js
+├─ tsconfig.json
+└─ package.json
+```
+
+## Mengatur variabel lingkungan
+Flowra membaca `.env` saat bootstrap (`core/config/env.ts`). Salin file contoh dan atur rahasia per environment:
+
+```bash
+cp .env.example .env
+```
+
+Pengaturan penting meliputi kredensial database (`DB_CONNECTION`, `DB_HOST`, `DB_USER`), port server HTTP (`APP_PORT`), dan level logging (`LOG_LEVEL`).
+
+## Checklist kilat 10 menit
+1. ✅ Jalankan `npm install` untuk memasang dependensi.
+2. ✅ Gandakan `.env.example` menjadi `.env` lalu isi detail koneksi.
+3. ✅ Jalankan `npx flowra make:module health` untuk membuat modul pertama.
+4. ✅ Implementasikan `app/modules/health/http/controllers/health.controller.ts` agar merespons `{status:'ok'}`.
+5. ✅ Daftarkan route HTTP di `app/modules/health/http/routes.ts`.
+6. ✅ Jalankan server dev dengan `npx flowra serve`.
+7. ✅ Uji endpoint lewat `curl http://localhost:3000/health`.
+8. ✅ Tambahkan service pengguna memakai `npx flowra make:service users/create-user`.
+9. ✅ Buat migrasi Knex `npx flowra make:migration create_users_table` lalu jalankan `npx flowra migrate`.
+10. ✅ Commit scaffold yang dihasilkan dan bagikan panduan onboarding ke tim.

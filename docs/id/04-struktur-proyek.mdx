@@ -1,0 +1,94 @@
+---
+id: project-structure
+slug: /architecture/project-structure
+sidebar_position: 4
+---
+
+# Struktur Proyek
+
+## Tata letak repositori
+Instalasi Flowra yang baru mirip dengan layout repositori framework. Memahami folder level atas membantu menentukan lokasi implementasi fitur dan area yang bisa diperluas.
+
+| Path | Fungsi |
+| ---- | ------ |
+| `app/` | Kode aplikasi Anda—modul, controller, service, validator, view model. |
+| `core/` | Inti framework: service container, abstraksi HTTP, konfigurasi, logging, integrasi antrian. |
+| `main/` | Berkas bootstrap aplikasi (`bootstrap.ts`, deteksi environment). |
+| `bin/` | Entry point CLI (misal `flowra.ts`). |
+| `public/` | Aset statis yang dilayani lapisan HTTP. |
+| `resources/views/` | Template Edge atau layout email. |
+| `docs/` | Dokumentasi proyek dan catatan keputusan arsitektur. |
+
+## Di dalam `app/`
+Sebagian besar pengembangan fitur berada di `app/modules`.
+
+```text
+app/
+├─ modules/
+│  ├─ auth/
+│  │  ├─ http/
+│  │  │  ├─ controllers/
+│  │  │  ├─ middlewares/
+│  │  │  └─ routes.ts
+│  │  ├─ services/
+│  │  ├─ models/
+│  │  ├─ validators/
+│  │  └─ providers.ts
+│  └─ users/
+│     └─ ...
+├─ providers/
+│  └─ index.ts
+└─ support/
+   ├─ logger.ts
+   └─ env.ts
+```
+
+- **Modul** mengemas semua kebutuhan untuk sebuah bounded context. Setiap modul mengekspor metadata melalui `index.ts` dan mendaftarkan dependensi di `providers.ts`.
+- **Providers** mengaitkan service modul ke dalam container.
+- **Support** menyimpan utilitas lintas modul (logger kustom, klien cache).
+
+## Di dalam `core/`
+Folder `core` memuat primitif framework yang dapat digunakan ulang.
+
+```text
+core/
+├─ container/
+│  ├─ application-container.ts
+│  ├─ decorators.ts
+│  ├─ providers.ts
+├─ config/
+│  ├─ env.ts
+│  └─ config.service.ts
+├─ http/
+│  ├─ kernel.ts
+│  ├─ middleware/
+│  ├─ router.ts
+│  └─ responses/
+├─ knex/
+│  ├─ connection.factory.ts
+│  └─ migrations.ts
+└─ testing/
+   └─ application-test-module.ts
+```
+
+- `container/` membangun dan mengekspor dependency injection container.
+- `config/` memuat variabel `.env`, menggabungkan file konfigurasi, dan menyediakan getter bertipe.
+- `http/` membungkus Express dengan pipeline middleware, penanganan exception, dan registrasi router.
+- `knex/` mengelola koneksi database, migrasi, dan seeder.
+- `testing/` menyiapkan container untuk integration maupun unit test.
+
+## Alur bootstrap
+Entry point di `main/bootstrap.ts` merangkai seluruh bagian:
+
+1. Memuat variabel environment lewat `core/config/env.ts`.
+2. Membuat instance application container.
+3. Mendaftarkan provider inti (`core/container/providers.ts`).
+4. Mendaftarkan provider modul (`app/providers/index.ts`).
+5. Mendaftarkan modul HTTP dan menyalakan server melalui `core/http/kernel.ts`.
+
+## Area yang sering disentuh developer
+- **Menambah route/controller baru** di `app/modules/<context>/http`.
+- **Berbagi service** lewat `app/modules/<context>/services` dan daftarkan di container.
+- **Membuat logika akses data** di `app/modules/<context>/models` atau `core/knex` jika ingin dibagi.
+- **Menyesuaikan pipeline HTTP** melalui `core/http/kernel.ts` dan folder `middlewares`.
+- **Mengotomasi tugas** di `bin/flowra.ts` serta definisi perintah CLI di `core/console`.

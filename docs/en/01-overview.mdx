@@ -1,0 +1,62 @@
+---
+id: overview
+slug: /overview
+sidebar_position: 1
+---
+
+# Flowra Overview & Philosophy
+
+## What is Flowra?
+Flowra is a modular Node.js framework that helps teams ship production-ready APIs without surrendering control over Express. It layers a thin but opinionated core on top of the familiar HTTP server, wrapping routing, dependency injection, configuration, and CLI automation into a cohesive system. Every Flowra application is composed of explicit modules that bundle routes, controllers, services, and data access so that new engineers can discover the entire feature flow at a glance.
+
+## Core Philosophy
+### Flow-based composition
+Flowra encourages you to describe end-to-end request handling as flows. Each module exposes a concise entry point that wires middleware, controller logic, and downstream services. This makes the request path obvious and makes it easier to reason about cross-cutting behaviour such as logging or error translation.
+
+### Explicit modules
+Instead of scattering files across ad-hoc folders, Flowra groups everything that belongs together—HTTP contracts, validation, business logic, persistence—inside `app/modules/<context>`. Modules remain lightweight, so spinning up a new bounded context is as easy as running a CLI generator.
+
+### Service container first
+At the heart of Flowra lies the service container defined in `core/container/application-container.ts`. It registers singletons such as the HTTP server, configuration repository, loggers, Knex connections, and any user-defined service. Controllers and other services declare the dependencies they need and Flowra resolves them, improving testability and enabling clear dependency graphs.
+
+### Declarative CLI
+Flowra's CLI (`bin/flowra.ts`) understands the framework conventions and can scaffold modules, controllers, services, migrations, and tests. Recipes are captured as declarative templates so teams can codify best practices and keep the repository consistent.
+
+## Why Flowra instead of plain Express?
+Express is intentionally unopinionated, which means every team must continually re-invent module boundaries, dependency injection, configuration loading, and CLI automation. Flowra solves these recurring problems by providing:
+
+- **Predictable structure** through the module layout in `app/modules` and the central `main/bootstrap.ts` entry point.
+- **Built-in dependency injection** via the service container, removing manual wiring and enabling constructor-based testing.
+- **Unified configuration** handled by `core/config`, including environment-aware defaults and typed accessors.
+- **CLI automation** that keeps the project consistent, from `flowra create-app` down to `flowra make:controller users/list`.
+- **Testing ergonomics** thanks to helpers in `core/testing` that boot the container in isolation.
+
+## End-to-end Hello World
+Creating and running a Flowra application only takes a minute.
+
+```bash
+npx flowra create-app my-api
+cd my-api
+npm install
+npx flowra make:module health
+npx flowra serve
+```
+
+Once the server is running you can hit `http://localhost:3000/health`:
+
+```bash
+curl http://localhost:3000/health
+# => {"status":"ok"}
+```
+
+Flowra watches your TypeScript files and reloads automatically while preserving the dependency container.
+
+## When should I use Flowra?
+Choose Flowra when you need more than a routing library but less than a monolithic framework. Ideal scenarios include:
+
+- Teams migrating from hand-rolled Express apps that want structure without sacrificing flexibility.
+- Products that must onboard engineers quickly and enforce consistent module boundaries.
+- Organisations that value testability, explicit dependencies, and declarative workflows.
+- Start-ups that expect to grow features fast and need the CLI to keep modules uniform.
+
+If your use case is a single micro endpoint or a lightweight proxy, plain Express might be simpler. For everything more complex, Flowra's modular design keeps large backends maintainable.

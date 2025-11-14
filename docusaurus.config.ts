@@ -25,11 +25,12 @@ const config: Config = {
       'classic',
       {
         docs: {
+          path: 'docs/en',
           lastVersion: 'current',
           versions: {
             current: {
               label: '1.0.0',
-            }
+            },
           },
           routeBasePath: 'docs',
           sidebarPath: './sidebars.ts',
@@ -38,6 +39,24 @@ const config: Config = {
           customCss: './src/css/custom.css',
         },
       } satisfies Preset.Options,
+    ],
+  ],
+
+  plugins: [
+    [
+      '@docusaurus/plugin-content-docs',
+      {
+        id: 'id',
+        path: 'docs/id',
+        routeBasePath: 'docs/id',
+        sidebarPath: './sidebars.id.ts',
+        lastVersion: 'current',
+        versions: {
+          current: {
+            label: 'Bahasa Indonesia',
+          },
+        },
+      },
     ],
   ],
 
@@ -57,7 +76,12 @@ const config: Config = {
           type: 'docSidebar',
           sidebarId: 'tutorialSidebar',
           position: 'left',
-          label: 'Documentation',
+          label: 'Documentation (EN)',
+        },
+        {
+          to: '/docs/id/overview',
+          label: 'Dokumentasi (ID)',
+          position: 'left',
         },
         {
           type: 'docsVersionDropdown',
@@ -77,8 +101,12 @@ const config: Config = {
           title: 'Docs',
           items: [
             {
-              label: 'Tutorial',
-              to: '/docs/getting-started/installation',
+              label: 'Overview (EN)',
+              to: '/docs/overview',
+            },
+            {
+              label: 'Ikhtisar (ID)',
+              to: '/docs/id/overview',
             },
           ],
         },

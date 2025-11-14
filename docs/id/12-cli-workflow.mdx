@@ -1,0 +1,43 @@
+---
+id: cli-workflows
+slug: /cli/workflows
+sidebar_position: 12
+---
+
+# Workflow CLI yang Direkomendasikan
+
+## Workflow 1 – Modul fitur baru
+1. `npx flowra make:module billing` – membuat `app/modules/billing` lengkap dengan route, controller, service, provider.
+2. `npx flowra make:model billing/invoice` – membuat `invoice.model.ts` dengan binding tabel.
+3. `npx flowra make:service billing/generate-invoice` – mendaftarkan service untuk membuat invoice.
+4. `npx flowra make:request billing/create-invoice` – menambahkan validasi payload masuk.
+5. `npx flowra make:migration create_invoices_table --create invoices` – menghasilkan skema.
+6. Daftarkan modul di `app/providers/index.ts` lalu jalankan `npx flowra migrate`.
+7. Implementasikan logika bisnis dan jalankan test lewat `npx flowra make:test billing/generate-invoice --type unit` kemudian `npm test`.
+
+> **tip**
+> Biarkan CLI berjalan dalam mode watch (`npx flowra serve --watch`) saat scaffolding untuk langsung memvalidasi struktur.
+
+## Workflow 2 – Endpoint API dengan integrasi database
+1. `npx flowra make:module reports` (jika belum ada).
+2. `npx flowra make:controller reports/summary --resource` – menyediakan aksi RESTful.
+3. `npx flowra make:model reports/monthly-summary --table reports_monthly` – menyiapkan query builder.
+4. `npx flowra make:service reports/build-summary` – mengorkestrasi pemanggilan model.
+5. `npx flowra make:middleware reports/auth` – membuat middleware untuk kontrol akses.
+6. Hubungkan middleware di `reports/index.ts` dan registrasikan route yang memanggil service baru.
+7. Jalankan `npx flowra migrate` jika fitur membutuhkan perubahan skema.
+8. Eksekusi `npm run lint && npm test` untuk memastikan kualitas kode.
+
+## Workflow 3 – Bugfix dengan pengaman
+1. `npx flowra make:test users/reset-password --type integration` – mereproduksi bug.
+2. `npx flowra make:service users/reset-password` – memastikan logika berada di service khusus.
+3. Perbarui controller dan validator menggunakan `make:controller` serta `make:request` bila belum tersedia.
+4. Jalankan `npx flowra serve --watch` untuk verifikasi manual.
+5. Eksekusi `npx flowra migrate` hanya jika perlu perubahan skema.
+6. Akhiri dengan `npm test` dan `npm run build` sebelum membuka pull request.
+
+## Tips produktivitas untuk tim
+- Gunakan template: atur stub kustom di `flowra.config.ts` agar generator menghasilkan komentar atau anotasi standar perusahaan.
+- Pair programming: jalankan perintah CLI di sesi terminal bersama untuk menjaga sinkronisasi.
+- Continuous delivery: tambahkan `flowra migrate` dan `npm run build` ke pipeline CI guna mendeteksi drift skema lebih awal.
+- Audit trail: commit berkas yang dihasilkan sebagai bagian perubahan yang sama untuk memperjelas intent dan memudahkan review.

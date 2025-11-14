@@ -1,0 +1,107 @@
+---
+id: models-queries
+slug: /data/models-queries
+sidebar_position: 10
+---
+
+# Models & Query Patterns
+
+## Model layer
+Flowra encourages encapsulating Knex queries in dedicated model classes. Models live under `app/modules/<context>/models` and provide an API tailored to the module's use cases.
+
+```ts
+// app/modules/users/models/user.model.ts
+import {Knex} from 'knex';
+import {injectable, inject} from '../../../core/container/decorators';
+
+@injectable()
+export class UserModel {
+  constructor(@inject('Database.primary') private readonly db: Knex) {}
+
+  async findAll(page = 1, perPage = 25) {
+    return this.db('users')
+      .select('id', 'email', 'name', 'created_at')
+      .orderBy('created_at', 'desc')
+      .paginate({currentPage: page, perPage});
+  }
+
+  async findById(id: string) {
+    return this.db('users').where({id}).first();
+  }
+
+  async findByEmail(email: string) {
+    return this.db('users').where({email}).first();
+  }
+
+  async insert(data: {email: string; name: string}) {
+    const [user] = await this.db('users')
+      .insert({...data})
+      .returning(['id', 'email', 'name']);
+    return user;
+  }
+}
+```
+
+## Pagination helper
+Flowra augments Knex with a pagination macro located in `core/knex/plugins/paginate.ts`. Importing the plugin once at bootstrap adds `.paginate()` to all queries. Use it to return metadata:
+
+```ts
+const result = await this.db('orders')
+  .where('status', 'pending')
+  .paginate({currentPage: page, perPage});
+
+return {
+  data: result.data,
+  meta: result.pagination,
+};
+```
+
+## Complex queries
+Use query builders to express joins and filters without leaving the model.
+
+```ts
+async listWithMetrics() {
+  return this.db('orders as o')
+    .join('order_items as oi', 'oi.order_id', 'o.id')
+    .select('o.id', 'o.status')
+    .sum({totalItems: 'oi.quantity'})
+    .groupBy('o.id');
+}
+```
+
+Wrap multiple statements in transactions via `DatabaseManager`:
+
+```ts
+async chargeOrder(orderId: string) {
+  return DatabaseManager.transaction(async trx => {
+    const order = await trx('orders').where({id: orderId}).first();
+    // ... perform updates
+  });
+}
+```
+
+## Transactions
+> **tip**
+> Expose transaction-aware methods by accepting an optional `trx: Knex.Transaction` parameter. This allows services to orchestrate multi-model workflows.
+
+```ts
+async updateStatus(id: string, status: string, trx?: Knex.Transaction) {
+  const query = (trx ?? this.db)('orders').where({id});
+  return query.update({status});
+}
+```
+
+## Performance guidelines
+- Index frequently queried columns (`created_at`, `email`).
+- Batch writes with `insert([...])` instead of looping over single inserts.
+- Avoid N+1 queries by leveraging joins or preloading relationships within models.
+- Use `select` to limit columns and reduce payload size.
+- Monitor slow queries via the SQL logger in `core/knex/logger.ts` (`DB_DEBUG=true`).
+
+## Common pitfalls
+> **warning**
+> Calling Knex directly from controllers spreads persistence logic everywhere. Always route database access through models or services.
+
+- Forgetting to release transactions on error—wrap logic in `DatabaseManager.transaction()`.
+- Mixing raw SQL and query builders without parameter binding—use Knex parameter placeholders to prevent SQL injection.
+- Returning database rows directly to clients—map them to DTOs inside services to hide internal column names.

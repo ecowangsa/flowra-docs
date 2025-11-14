@@ -1,0 +1,43 @@
+---
+id: cli-workflows
+slug: /cli/workflows
+sidebar_position: 12
+---
+
+# Opinionated CLI Workflows
+
+## Workflow 1 – New feature module
+1. `npx flowra make:module billing` – scaffolds `app/modules/billing` with routes, controller, service, provider.
+2. `npx flowra make:model billing/invoice` – creates `invoice.model.ts` with table binding.
+3. `npx flowra make:service billing/generate-invoice` – registers a service for generating invoices.
+4. `npx flowra make:request billing/create-invoice` – adds validation for incoming payloads.
+5. `npx flowra make:migration create_invoices_table --create invoices` – generate schema.
+6. Register module in `app/providers/index.ts` and run `npx flowra migrate`.
+7. Implement business logic and run tests via `npx flowra make:test billing/generate-invoice --type unit` followed by `npm test`.
+
+> **tip**
+> Keep the CLI open in watch mode (`npx flowra serve --watch`) while scaffolding to immediately validate the structure.
+
+## Workflow 2 – API endpoint with database integration
+1. `npx flowra make:module reports` (if not already present).
+2. `npx flowra make:controller reports/summary --resource` – provides RESTful actions.
+3. `npx flowra make:model reports/monthly-summary --table reports_monthly` – sets up query builder.
+4. `npx flowra make:service reports/build-summary` – orchestrates model calls.
+5. `npx flowra make:middleware reports/auth` – create middleware to enforce access control.
+6. Wire middleware in `reports/index.ts` and register routes to call the new service.
+7. Run `npx flowra migrate` if the feature requires schema changes.
+8. Execute `npm run lint && npm test` to confirm code health.
+
+## Workflow 3 – Bugfix with guard rails
+1. `npx flowra make:test users/reset-password --type integration` – reproduce the bug.
+2. `npx flowra make:service users/reset-password` – ensure logic lives in a dedicated service.
+3. Update the controller and validator using `make:controller` and `make:request` if missing.
+4. Run `npx flowra serve --watch` to manually verify the fix.
+5. Execute `npx flowra migrate` only if schema adjustments are necessary.
+6. Finish with `npm test` and `npm run build` before opening a pull request.
+
+## Productivity tips for teams
+- Use templates: configure custom stubs in `flowra.config.ts` so generators produce company-standard comments or annotations.
+- Pair programming: run CLI commands over shared terminal sessions to keep both developers aligned.
+- Continuous delivery: add `flowra migrate` and `npm run build` to CI pipelines to catch schema drift early.
+- Audit trail: commit generated files as part of the same change to show intent and ease code reviews.

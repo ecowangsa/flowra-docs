@@ -1,0 +1,107 @@
+---
+id: models-queries
+slug: /data/models-queries
+sidebar_position: 10
+---
+
+# Model & Pola Query
+
+## Lapisan model
+Flowra mendorong enkapsulasi query Knex dalam kelas model khusus. Model berada di `app/modules/<context>/models` dan menyediakan API yang selaras dengan kebutuhan modul.
+
+```ts
+// app/modules/users/models/user.model.ts
+import {Knex} from 'knex';
+import {injectable, inject} from '../../../core/container/decorators';
+
+@injectable()
+export class UserModel {
+  constructor(@inject('Database.primary') private readonly db: Knex) {}
+
+  async findAll(page = 1, perPage = 25) {
+    return this.db('users')
+      .select('id', 'email', 'name', 'created_at')
+      .orderBy('created_at', 'desc')
+      .paginate({currentPage: page, perPage});
+  }
+
+  async findById(id: string) {
+    return this.db('users').where({id}).first();
+  }
+
+  async findByEmail(email: string) {
+    return this.db('users').where({email}).first();
+  }
+
+  async insert(data: {email: string; name: string}) {
+    const [user] = await this.db('users')
+      .insert({...data})
+      .returning(['id', 'email', 'name']);
+    return user;
+  }
+}
+```
+
+## Helper paginasi
+Flowra menambahkan macro paginasi di `core/knex/plugins/paginate.ts`. Plugin ini diimport sekali saat bootstrap sehingga `.paginate()` tersedia di semua query. Gunakan untuk mengembalikan metadata:
+
+```ts
+const result = await this.db('orders')
+  .where('status', 'pending')
+  .paginate({currentPage: page, perPage});
+
+return {
+  data: result.data,
+  meta: result.pagination,
+};
+```
+
+## Query kompleks
+Gunakan query builder untuk membuat join dan filter tanpa keluar dari model.
+
+```ts
+async listWithMetrics() {
+  return this.db('orders as o')
+    .join('order_items as oi', 'oi.order_id', 'o.id')
+    .select('o.id', 'o.status')
+    .sum({totalItems: 'oi.quantity'})
+    .groupBy('o.id');
+}
+```
+
+Bungkus beberapa statement di dalam transaksi melalui `DatabaseManager`:
+
+```ts
+async chargeOrder(orderId: string) {
+  return DatabaseManager.transaction(async trx => {
+    const order = await trx('orders').where({id: orderId}).first();
+    // ... lakukan pembaruan
+  });
+}
+```
+
+## Transaksi
+> **tip**
+> Sediakan method yang aware terhadap transaksi dengan menerima parameter opsional `trx: Knex.Transaction`. Service dapat mengorkestrasi beberapa model sekaligus.
+
+```ts
+async updateStatus(id: string, status: string, trx?: Knex.Transaction) {
+  const query = (trx ?? this.db)('orders').where({id});
+  return query.update({status});
+}
+```
+
+## Panduan performa
+- Buat index pada kolom yang sering dikueri (`created_at`, `email`).
+- Batch write menggunakan `insert([...])` dibanding loop insert tunggal.
+- Hindari query N+1 dengan join atau preload relasi di dalam model.
+- Gunakan `select` untuk membatasi kolom dan mengecilkan payload.
+- Pantau query lambat melalui SQL logger di `core/knex/logger.ts` (`DB_DEBUG=true`).
+
+## Jebakan umum
+> **warning**
+> Memanggil Knex langsung dari controller menyebarkan logika persistensi ke mana-mana. Selalu arahkan akses database melalui model atau service.
+
+- Lupa me-release transaksi saat error—bungkus logika dengan `DatabaseManager.transaction()`.
+- Mencampur SQL mentah dan query builder tanpa parameter binding—gunakan placeholder Knex untuk mencegah SQL injection.
+- Mengembalikan row database langsung ke klien—map ke DTO di dalam service agar nama kolom internal tersembunyi.

@@ -1,0 +1,50 @@
+---
+id: security
+slug: /security/overview
+sidebar_position: 13
+---
+
+# Keamanan di Flowra
+
+## Default defensif
+Kernel HTTP Flowra (`core/http/kernel.ts`) memasang middleware penting: Helmet untuk header, pembatasan CORS, batas ukuran JSON, serta korelasi request ID. Pastikan semuanya tetap aktif di produksi.
+
+## Katalog middleware
+- **Autentikasi** – letakkan verifikasi JWT atau session di `app/modules/auth/http/middlewares/auth.middleware.ts`. Inject service untuk validasi token.
+- **Rate limiting** – gunakan `core/http/middleware/rate-limit.middleware.ts` guna melindungi route sensitif; konfigurasikan penyimpanan Redis melalui service container.
+- **Perlindungan CSRF** – relevan untuk aplikasi web yang merender view; pakai generator token di `core/http/security/csrf.ts`.
+- **Sanitasi input** – manfaatkan skema Zod dan utilitas escape di `core/http/validation/sanitise.ts`.
+
+## Strategi validasi
+> **tip**
+> Lakukan validasi di edge. Simpan `http/requests/*.request.ts` sebagai garis pertahanan pertama sebelum controller memanggil service.
+
+- Gunakan skema Zod atau Yup untuk memaksa format dan konversi tipe data.
+- Normalisasi tanggal, angka, dan enum agar mencegah SQL injection dari input tidak bertipe.
+- Lempar `ValidationException` untuk mengembalikan respons 422 konsisten dengan error per field.
+
+## Manajemen secret
+- Simpan secret di `.env` atau secret manager platform. Jangan pernah commit `.env`.
+- Gunakan configuration service (`core/config/config.service.ts`) untuk mengakses secret, bukan langsung `process.env`, sehingga test bisa melakukan override.
+- Rutin rotasi kredensial dan gunakan API key yang bersifat scoped.
+
+## Penanganan error
+`core/http/responses/error-handler.ts` memusatkan pemetaan exception. Error kustom sebaiknya menurunkan `HttpException` dan menyertakan pesan aman. Hindari membocorkan stack trace—set `APP_DEBUG=false` di produksi.
+
+## Checklist produksi
+| Item | Tujuan |
+| ---- | ------ |
+| Terminasi HTTPS | Pastikan TLS di Flowra atau di proxy hulu. |
+| Header reverse proxy | Atur `TRUST_PROXY=true` agar Express menghormati `X-Forwarded-*`. |
+| Cookie aman | Set `SESSION_SECURE=true` dan `SESSION_SAME_SITE=strict` saat memakai session. |
+| Logging | Kirim log ke sistem terpusat; sertakan request ID untuk korelasi. |
+| Monitoring | Integrasikan APM lewat hook di `core/events`. |
+
+## Panduan tambahan
+- Batasi middleware per modul seminimal mungkin.
+- Gunakan query terparameter di model untuk mencegah SQL injection (Knex melakukannya saat memakai placeholder).
+- Validasi upload file berdasarkan ukuran dan tipe MIME (`core/http/middleware/upload.middleware.ts`).
+- Jaga dependensi tetap mutakhir; jalankan `npm audit` secara berkala.
+
+> **warning**
+> Jangan percaya data dari API eksternal. Normalisasi dan validasi sebelum menyimpan atau meneruskannya.

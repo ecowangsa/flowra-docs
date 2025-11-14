@@ -1,0 +1,122 @@
+---
+id: knex-setup
+slug: /data/knex-setup
+sidebar_position: 9
+---
+
+# Konfigurasi Knex
+
+## Ringkasan
+Flowra menggunakan Knex sebagai query builder SQL utama. Konfigurasi berada di `core/knex` dan membaca variabel lingkungan dari `.env`. CLI menyediakan `orm.cli.config.js` sehingga migrasi dan seeder berjalan dengan pengaturan yang sama seperti aplikasi runtime.
+
+## Berkas konfigurasi
+`core/knex/connection.factory.ts` mengekspor factory yang memetakan environment:
+
+```ts
+import knex, {Knex} from 'knex';
+import {config} from '../config/config.service';
+
+export function createConnection(): Knex {
+  return knex({
+    client: config.get('database.client'),
+    connection: {
+      host: config.get('database.host'),
+      port: config.get('database.port'),
+      user: config.get('database.user'),
+      password: config.get('database.password'),
+      database: config.get('database.name'),
+    },
+    pool: {
+      min: config.get('database.poolMin', 2),
+      max: config.get('database.poolMax', 10),
+    },
+    migrations: {
+      directory: 'database/migrations',
+      tableName: 'migrations',
+    },
+  });
+}
+```
+
+Nilai berbasis environment didefinisikan di `config/database.ts`:
+
+```ts
+export default {
+  client: process.env.DB_CONNECTION ?? 'pg',
+  host: process.env.DB_HOST ?? '127.0.0.1',
+  port: Number(process.env.DB_PORT ?? 5432),
+  user: process.env.DB_USER ?? 'postgres',
+  password: process.env.DB_PASSWORD ?? 'secret',
+  name: process.env.DB_DATABASE ?? 'flowra',
+  poolMin: Number(process.env.DB_POOL_MIN ?? 2),
+  poolMax: Number(process.env.DB_POOL_MAX ?? 10),
+};
+```
+
+## Contoh `.env`
+```
+DB_CONNECTION=pg
+DB_HOST=127.0.0.1
+DB_PORT=5432
+DB_USER=postgres
+DB_PASSWORD=secret
+DB_DATABASE=flowra
+DB_POOL_MIN=2
+DB_POOL_MAX=10
+```
+
+## Multi koneksi
+Jika membutuhkan beberapa database, tambahkan konfigurasi bernama di `config/database.ts` dan daftarkan pada container:
+
+```ts
+export default {
+  default: 'primary',
+  connections: {
+    primary: { /* ... */ },
+    analytics: { /* ... */ },
+  },
+};
+```
+
+Kemudian daftarkan factory:
+
+```ts
+container.singleton('Database.primary', () => createConnection('primary'));
+container.singleton('Database.analytics', () => createConnection('analytics'));
+```
+
+Gunakan koneksi yang benar di dalam service:
+
+```ts
+@injectable()
+export class ReportService {
+  constructor(@inject('Database.analytics') private readonly db: Knex) {}
+}
+```
+
+## Integrasi CLI
+`orm.cli.config.js` memuat konfigurasi yang sama dan mengekspos perintah:
+
+```js
+module.exports = {
+  config: './core/knex/knexfile.js',
+  migrations: {
+    directory: 'database/migrations',
+    stub: 'core/knex/stubs/migration.stub',
+  },
+  seeds: {
+    directory: 'database/seeds',
+  },
+};
+```
+
+Jalankan migrasi:
+
+```bash
+npx flowra migrate
+npx flowra migrate:rollback
+npx flowra seed
+```
+
+> **note**
+> Untuk pipeline CI, set `DB_MIGRATE=true` agar migrasi otomatis berjalan saat `flowra serve` dijalankan.

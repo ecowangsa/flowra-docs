@@ -1,0 +1,34 @@
+---
+id: faq
+slug: /faq
+sidebar_position: 17
+---
+
+# Frequently Asked Questions
+
+## How is Flowra different from Express?
+Flowra provides a modular structure, service container, and CLI scaffolding on top of Express. It keeps the flexibility of Express while eliminating manual wiring. See [Overview & Philosophy](/docs/overview).
+
+## Can I use JavaScript instead of TypeScript?
+Yes. The CLI generates TypeScript by default, but you can configure `flowra.config.ts` to emit JavaScript and adjust `tsconfig.json` accordingly. Keep type definitions for better tooling even if the runtime code is JS.
+
+## Does Flowra support WebSockets?
+Flowra focuses on HTTP first. You can integrate Socket.IO by registering it as a service in the container and attaching it inside `main/bootstrap.ts`. Ensure namespaces live inside modules to maintain boundaries.
+
+## How do I run migrations in CI?
+Set `DB_MIGRATE=true` and run `npx flowra migrate` before starting the app. Combine with `npm run build` to verify TypeScript compilation. See [Knex configuration](/docs/data/knex-setup).
+
+## What testing framework should I use?
+Jest is configured out of the box, but you can plug in Vitest or Mocha. Ensure the chosen runner calls `core/testing/application-test-module.ts` so modules load correctly. Refer to [Testing overview](/docs/testing/overview).
+
+## Can I share services between modules?
+Yes. Register services in `app/providers/index.ts` or individual module providers. Inject them via the container using `@inject()` decorators. See [Service container](/docs/architecture/service-container).
+
+## How do I handle background jobs?
+Use the queue providers inside `core/queues`. Register BullMQ queues and create workers under `app/modules/<context>/workers`. See the [Recipes](/docs/recipes) section for an example.
+
+## Is Flowra ready for production?
+Yes. The framework powers production services and includes best practices for logging, migrations, and deployment. Review the [Deployment guide](/docs/deployment/guide) and [Security overview](/docs/security/overview) before shipping.
+
+## Where can I get help?
+Open GitHub issues, join the community chat linked in the README, or explore the `/docs` site for deep dives. Contributions are welcome—check the repository guidelines for details.
