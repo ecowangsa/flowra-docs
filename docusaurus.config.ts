@@ -10,7 +10,6 @@ const config: Config = {
   organizationName: 'ecowangsa',
   projectName: 'flowra-docs',
   onBrokenLinks: 'throw',
-  onBrokenMarkdownLinks: 'warn',
   trailingSlash: false,
   i18n: {
     defaultLocale: 'en',

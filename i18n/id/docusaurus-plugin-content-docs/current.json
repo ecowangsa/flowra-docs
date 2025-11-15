@@ -1,0 +1,38 @@
+{
+  "version.label": {
+    "message": "Next",
+    "description": "The label for version current"
+  },
+  "sidebar.docsSidebar.category.Overview": {
+    "message": "Overview",
+    "description": "The label for category 'Overview' in sidebar 'docsSidebar'"
+  },
+  "sidebar.docsSidebar.category.Getting Started": {
+    "message": "Getting Started",
+    "description": "The label for category 'Getting Started' in sidebar 'docsSidebar'"
+  },
+  "sidebar.docsSidebar.category.Core Architecture": {
+    "message": "Core Architecture",
+    "description": "The label for category 'Core Architecture' in sidebar 'docsSidebar'"
+  },
+  "sidebar.docsSidebar.category.Routing & Modules": {
+    "message": "Routing & Modules",
+    "description": "The label for category 'Routing & Modules' in sidebar 'docsSidebar'"
+  },
+  "sidebar.docsSidebar.category.Data & Database": {
+    "message": "Data & Database",
+    "description": "The label for category 'Data & Database' in sidebar 'docsSidebar'"
+  },
+  "sidebar.docsSidebar.category.CLI & Tooling": {
+    "message": "CLI & Tooling",
+    "description": "The label for category 'CLI & Tooling' in sidebar 'docsSidebar'"
+  },
+  "sidebar.docsSidebar.category.Security & Testing": {
+    "message": "Security & Testing",
+    "description": "The label for category 'Security & Testing' in sidebar 'docsSidebar'"
+  },
+  "sidebar.docsSidebar.category.Deployment & Recipes": {
+    "message": "Deployment & Recipes",
+    "description": "The label for category 'Deployment & Recipes' in sidebar 'docsSidebar'"
+  }
+}
