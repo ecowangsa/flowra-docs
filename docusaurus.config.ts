@@ -17,7 +17,15 @@ const config: Config = {
   onBrokenLinks: 'throw',
   i18n: {
     defaultLocale: 'en',
-    locales: ['en'],
+    locales: ['en', 'id'],
+    localeConfigs: {
+      en: {
+        htmlLang: 'en-GB',
+      },
+      id: {
+        htmlLang: 'id-ID'
+      }
+    }
   },
 
   presets: [
@@ -76,12 +84,11 @@ const config: Config = {
           type: 'docSidebar',
           sidebarId: 'tutorialSidebar',
           position: 'left',
-          label: 'Documentation (EN)',
+          label: 'Documentation',
         },
         {
-          to: '/docs/id/overview',
-          label: 'Dokumentasi (ID)',
-          position: 'left',
+          type: 'localeDropdown',
+          position: 'right',
         },
         {
           type: 'docsVersionDropdown',
