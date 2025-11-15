@@ -1,0 +1,93 @@
+---
+title: 'Strategi Pengujian'
+description: 'Rancang piramida pengujian pragmatis untuk aplikasi Flowra dengan unit, integrasi, dan end-to-end test.'
+---
+
+Suite pengujian yang andal memastikan modul Flowra tetap stabil saat fitur berkembang. Panduan ini menjelaskan struktur pengujian dan cara menjalankannya dengan tooling yang tersedia.
+
+## Perintah test
+
+```bash
+npm test
+npm run test:watch
+```
+
+Scaffold menggunakan Jest dengan ts-jest untuk dukungan TypeScript. Atur script di `package.json` untuk menjalankan unit dan integration test.
+
+## Piramida pengujian
+
+| Lapisan | Tujuan | Tooling |
+| --- | --- | --- |
+| Unit test | Memvalidasi service dan helper secara terisolasi | Jest + ts-jest |
+| Integration test | Menguji controller, middleware, dan interaksi database | supertest + database Knex untuk test |
+| End-to-end test | Opsional; memvalidasi workflow via HTTP atau CLI | Playwright, Postman, atau contract test |
+
+## Unit test
+
+- Uji service dengan memock dependensi menggunakan service container (`container.registerInstance`).
+- Gunakan factory atau fixture untuk membuat data uji.
+- Fokus pada aturan bisnis dan edge case tanpa menyentuh database.
+
+```ts title="app/modules/users/__tests__/create-user-service.test.ts"
+import {container} from 'tsyringe';
+import {CreateUserService} from '../services/create-user-service';
+
+describe('CreateUserService', () => {
+  beforeEach(() => {
+    container.clearInstances();
+    container.registerInstance('database.default', {
+      insert: () => ({returning: () => Promise.resolve([{id: '1', email: 'demo@flowra.dev'}])}),
+    });
+  });
+
+  it('creates a user', async () => {
+    const service = container.resolve(CreateUserService);
+    const user = await service.execute({email: 'demo@flowra.dev', name: 'Demo'});
+    expect(user.email).toBe('demo@flowra.dev');
+  });
+});
+```
+
+## Integration test
+
+- Gunakan `core/testing/http-test-factory.ts` untuk mem-boot aplikasi Express dengan database in-memory atau test.
+- Seed data via Knex sebelum setiap test menggunakan transaksi atau seed khusus.
+- Asersi kode status HTTP, payload respons, dan efek samping (mutasi database, job yang diantrikan).
+
+```ts title="app/modules/users/__tests__/users-routes.test.ts"
+import request from 'supertest';
+import {createTestApp} from '../../../core/testing/http-test-factory';
+
+describe('Users routes', () => {
+  it('creates and lists users', async () => {
+    const app = await createTestApp();
+    await request(app).post('/users').send({email: 'demo@flowra.dev', name: 'Demo'}).expect(201);
+    const response = await request(app).get('/users').expect(200);
+    expect(response.body.data).toHaveLength(1);
+  });
+});
+```
+
+## End-to-end test
+
+- Fokus pada perjalanan pengguna kritis (sign-up, checkout, reporting).
+- Jalankan pada environment staging atau deployment sementara.
+- Gunakan environment variable untuk mengarahkan test ke base URL yang benar.
+
+## Manajemen data uji
+
+- Gunakan transaksi Knex untuk membungkus integration test dan rollback otomatis.
+- Buat helper factory di `core/testing/factories` guna menghasilkan fixture konsisten.
+- Pilih seed ringan dibanding dump SQL besar.
+
+## Continuous integration
+
+- Jalankan `npm test` di setiap pull request.
+- Paralelkan suite (unit vs integrasi) untuk mengurangi waktu eksekusi.
+- Publikasikan laporan coverage untuk memantau regresi.
+
+:::warning Jaga test tetap deterministik
+Hindari ketergantungan pada panggilan jaringan atau timestamp saat ini tanpa kontrol. Mock layanan eksternal dan bekukan waktu menggunakan utilitas seperti `jest.useFakeTimers()`.
+:::
+
+Dengan investasi pada strategi pengujian berlapis, tim Flowra dapat refactor dengan percaya diri dan menangkap regresi sebelum mencapai produksi.

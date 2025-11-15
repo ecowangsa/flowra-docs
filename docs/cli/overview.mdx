@@ -1,0 +1,74 @@
+---
+title: 'Flowra CLI Overview'
+description: 'Understand the Flowra CLI entrypoint, configuration, and available commands.'
+---
+
+Flowra ships with a TypeScript-powered CLI located at `bin/flowra.ts`. It bootstraps the service container, discovers commands, and provides generators that automate repetitive tasks.
+
+## CLI entrypoint
+
+```ts title="bin/flowra.ts"
+import 'reflect-metadata';
+import {Command} from 'commander';
+import {registerCommands} from '../app/commands';
+
+const program = new Command();
+program.name('flowra').description('Flowra command line interface').version('1.0.0');
+
+registerCommands(program);
+
+program.parseAsync();
+```
+
+- `reflect-metadata` enables decorators used by the service container.
+- Commands live in `app/commands` and register themselves with Commander.
+
+## Command discovery
+
+Each command exports a function that accepts the Commander program instance:
+
+```ts title="app/commands/make-module.ts"
+import type {Command} from 'commander';
+import {scaffoldModule} from '../scaffolding/module-generator';
+
+export const registerMakeModuleCommand = (program: Command) => {
+  program
+    .command('make:module <name>')
+    .description('Generate a module with controller, service, routes, and tests')
+    .action(async name => {
+      await scaffoldModule(name);
+      console.log(`Module ${name} created.`);
+    });
+};
+```
+
+`registerCommands(program)` imports all command modules and invokes their registration functions.
+
+## Available commands
+
+| Command | Description |
+| --- | --- |
+| `flowra make:module <name>` | Generates a module skeleton with controllers, services, models, and tests. |
+| `flowra make:controller <module> <name>` | Adds a controller to an existing module. |
+| `flowra make:service <module> <name>` | Generates a new service class and updates the container bindings. |
+| `flowra make:migration <name>` | Creates a timestamped Knex migration. |
+| `flowra make:seed <name>` | Generates a seed script for test or demo data. |
+| `flowra list` | Displays registered modules and routes (useful for audits). |
+| `flowra dev` | Boots the development server with hot reload (alias for `npm run dev`). |
+
+:::note Custom commands
+Add new commands under `app/commands`. Ensure they call into reusable scaffolding utilities stored in `resources/templates` when generating files.
+:::
+
+## Configuration and templates
+
+- `resources/templates` stores stub files used by generators (controllers, services, tests).
+- Update templates to enforce your team's coding standards.
+- Use placeholders like `__MODULE__` inside templates and replace them programmatically in generators.
+
+## Error handling and logging
+
+- Wrap async command actions in try/catch to display friendly error messages.
+- Use the shared logger (`container.resolve('logger')`) when commands need structured logging.
+
+The CLI acts as the automation backbone for Flowra projects—learn it well and keep it up to date as your architecture evolves.

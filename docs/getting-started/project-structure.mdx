@@ -1,0 +1,84 @@
+---
+title: 'Project Structure'
+description: 'Learn how a Flowra application is organised and where to place your code as the project grows.'
+---
+
+Flowra enforces a predictable layout so every module feels familiar. The scaffold separates framework internals from application code and highlights the folders you will touch most often.
+
+## Repository overview
+
+```text
+flowra/
+├─ app/
+│  ├─ modules/
+│  ├─ services/
+│  └─ jobs/
+├─ bin/
+│  └─ flowra.ts
+├─ config/
+│  ├─ app.ts
+│  ├─ database.ts
+│  └─ queue.ts
+├─ core/
+│  ├─ container/
+│  ├─ http/
+│  ├─ database/
+│  └─ testing/
+├─ main/
+│  ├─ bootstrap.ts
+│  └─ server.ts
+├─ public/
+├─ resources/
+└─ package.json
+```
+
+### Key directories
+
+- **`app/modules`** — Home to feature modules. Each module bundles `controllers`, `services`, `routes.ts`, optional `validators`, and domain-specific config.
+- **`app/services`** — Cross-cutting services shared by multiple modules (e.g., email, queue publishers). Register them in the container.
+- **`app/jobs`** — Background jobs managed via queues or schedulers, usually resolved from the container.
+- **`bin/flowra.ts`** — CLI entrypoint that bootstraps commands from `app/commands`.
+- **`config/`** — Environment-aware configuration files. They expose typed objects consumed by the container.
+- **`core/`** — Framework primitives such as the HTTP kernel, exception handler, and DI container wiring. You rarely modify these but can extend them.
+- **`main/`** — Application bootstrap: builds the container, registers modules, and starts the HTTP server.
+- **`resources/`** — Templates and stub files used by the CLI when scaffolding.
+
+:::tip Module-first mindset
+Treat `app/modules/<domain>` as the default home for business logic. Shared utilities should live in `app/services` only when they truly span modules.
+:::
+
+## Module anatomy
+
+A typical module contains:
+
+```text
+app/modules/users/
+├─ controllers/
+│  └─ create-user-controller.ts
+├─ services/
+│  └─ create-user-service.ts
+├─ validators/
+│  └─ create-user-validator.ts
+├─ models/
+│  └─ user-model.ts
+└─ routes.ts
+```
+
+- `controllers/` orchestrate HTTP behaviour and depend on services.
+- `services/` contain domain logic and interact with models or repositories.
+- `validators/` house schema definitions for request validation (e.g., Zod, Yup, or custom logic).
+- `models/` wrap Knex queries and transactions.
+- `routes.ts` exports a function that registers routes on the Express router.
+
+## Where developers spend time
+
+1. **Controllers and services** – implementing features and orchestrating dependencies.
+2. **Models and repositories** – structuring database access and migrations.
+3. **Configuration** – adding environment-specific settings and secrets.
+4. **Tests** – integration tests live next to modules (`app/modules/<domain>/__tests__`).
+
+:::note Watching for consistency
+Use the CLI generators (`npx flowra make:module users`) to enforce naming conventions, TypeScript strictness, and dependency registration. Hand-written files can easily miss container bindings.
+:::
+
+For a deeper dive into the request flow inside this structure, read the [Request Lifecycle](../architecture/request-lifecycle).

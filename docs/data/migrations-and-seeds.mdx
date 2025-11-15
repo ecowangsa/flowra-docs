@@ -1,0 +1,112 @@
+---
+title: 'Migrations & Seeds'
+description: 'Manage schema changes and seed data in Flowra projects using Knex migrations.'
+---
+
+Schema changes and seed data keep environments reproducible. Flowra relies on Knex's migration system, integrating it with the CLI and service container.
+
+## Directory layout
+
+```
+resources/
+└─ database/
+   ├─ migrations/
+   └─ seeds/
+```
+
+- Place generated migrations under `resources/database/migrations`.
+- Store seed scripts in `resources/database/seeds` for fixtures or demo data.
+
+## Generating migrations
+
+```bash
+npx flowra make:migration create_users_table
+```
+
+This command scaffolds a timestamped migration file. Example content:
+
+```ts title="resources/database/migrations/202405010001_create_users_table.ts"
+import type {Knex} from 'knex';
+
+export async function up(knex: Knex) {
+  await knex.schema.createTable('users', table => {
+    table.uuid('id').primary();
+    table.string('email').notNullable().unique();
+    table.string('name').notNullable();
+    table.timestamps(true, true);
+  });
+}
+
+export async function down(knex: Knex) {
+  await knex.schema.dropTable('users');
+}
+```
+
+:::note Timestamp prefix
+Knex sorts migrations lexicographically. Keep the timestamp prefix to ensure execution order.
+:::
+
+## Running migrations
+
+```bash
+npm run knex migrate:latest
+```
+
+- Reads `config/database.ts` for connection info.
+- Applies pending migrations to the default connection.
+- Use `npm run knex migrate:rollback` to undo the latest batch.
+
+For a specific connection:
+
+```bash
+npm run knex -- migrate:latest --knexfile config/reporting.knex.ts
+```
+
+Create additional Knex config files when multiple connections require separate migration folders.
+
+## Seed data
+
+Generate a seed file:
+
+```bash
+npx flowra make:seed demo_users
+```
+
+Example seed:
+
+```ts title="resources/database/seeds/01_demo_users.ts"
+import type {Knex} from 'knex';
+
+export async function seed(knex: Knex) {
+  await knex('users').del();
+  await knex('users').insert([
+    {id: '01HX1', email: 'demo@flowra.dev', name: 'Demo User'},
+    {id: '01HX2', email: 'ops@flowra.dev', name: 'Ops User'},
+  ]);
+}
+```
+
+Run seeds with:
+
+```bash
+npm run knex seed:run
+```
+
+:::tip Isolate test fixtures
+Use dedicated seeds for automated tests and run them in your test setup scripts. Keep production data seeding separate.
+:::
+
+## Recommended workflow
+
+1. **Create a migration** for every schema change.
+2. **Write seeds** for baseline data (admin users, feature flags).
+3. **Review migrations** in pull requests to catch destructive changes.
+4. **Automate execution** in CI/CD pipelines before running tests and deployments.
+
+## Troubleshooting
+
+- If migrations fail with `lock` errors, ensure only one process runs them at a time.
+- Use `knex migrate:status` to list applied migrations.
+- For destructive changes, create a new migration rather than editing past files.
+
+By standardising migrations and seeds you keep every environment in sync—from local development to production rollouts.

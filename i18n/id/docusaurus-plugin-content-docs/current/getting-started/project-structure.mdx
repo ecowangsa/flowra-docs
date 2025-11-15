@@ -1,0 +1,84 @@
+---
+title: 'Struktur Proyek'
+description: 'Pelajari bagaimana aplikasi Flowra diorganisasi dan di mana menaruh kode saat proyek berkembang.'
+---
+
+Flowra menetapkan layout yang dapat diprediksi sehingga setiap modul terasa familiar. Scaffold memisahkan internal framework dari kode aplikasi dan menyoroti folder yang paling sering disentuh.
+
+## Gambaran repository
+
+```text
+flowra/
+├─ app/
+│  ├─ modules/
+│  ├─ services/
+│  └─ jobs/
+├─ bin/
+│  └─ flowra.ts
+├─ config/
+│  ├─ app.ts
+│  ├─ database.ts
+│  └─ queue.ts
+├─ core/
+│  ├─ container/
+│  ├─ http/
+│  ├─ database/
+│  └─ testing/
+├─ main/
+│  ├─ bootstrap.ts
+│  └─ server.ts
+├─ public/
+├─ resources/
+└─ package.json
+```
+
+### Direktori penting
+
+- **`app/modules`** — Rumah bagi modul fitur. Setiap modul menyatukan `controllers`, `services`, `routes.ts`, opsional `validators`, dan konfigurasi domain.
+- **`app/services`** — Service lintas modul (mis. email, publisher queue). Registrasikan di container.
+- **`app/jobs`** — Job background yang dikelola melalui antrean atau scheduler, biasanya di-resolve dari container.
+- **`bin/flowra.ts`** — Entrypoint CLI yang mem-boot command dari `app/commands`.
+- **`config/`** — Berkas konfigurasi sadar-environment. Menghasilkan objek bertipe yang dikonsumsi container.
+- **`core/`** — Primitif framework seperti HTTP kernel, exception handler, dan wiring DI. Jarang diubah namun bisa diekstensikan.
+- **`main/`** — Bootstrap aplikasi: membangun container, mendaftarkan modul, dan menjalankan server HTTP.
+- **`resources/`** — Template dan stub yang digunakan CLI saat scaffolding.
+
+:::tip Mindset modul terlebih dahulu
+Anggap `app/modules/<domain>` sebagai rumah default logika bisnis. Utilitas bersama sebaiknya tinggal di `app/services` hanya ketika benar-benar lintas modul.
+:::
+
+## Anatomi modul
+
+Modul tipikal berisi:
+
+```text
+app/modules/users/
+├─ controllers/
+│  └─ create-user-controller.ts
+├─ services/
+│  └─ create-user-service.ts
+├─ validators/
+│  └─ create-user-validator.ts
+├─ models/
+│  └─ user-model.ts
+└─ routes.ts
+```
+
+- `controllers/` mengorkestrasi perilaku HTTP dan bergantung pada service.
+- `services/` menyimpan logika domain dan berinteraksi dengan model atau repository.
+- `validators/` berisi skema validasi request (mis. Zod, Yup, atau logika kustom).
+- `models/` membungkus query dan transaksi Knex.
+- `routes.ts` mengekspor fungsi yang mendaftarkan route ke router Express.
+
+## Area fokus developer
+
+1. **Controller dan service** – mengimplementasikan fitur dan mengatur dependensi.
+2. **Model dan repository** – menyusun akses database dan migration.
+3. **Konfigurasi** – menambah pengaturan dan secret per environment.
+4. **Testing** – uji integrasi berada di dekat modul (`app/modules/<domain>/__tests__`).
+
+:::note Jaga konsistensi
+Gunakan generator CLI (`npx flowra make:module users`) untuk menjaga penamaan, ketatnya TypeScript, dan pendaftaran dependensi. Berkas manual mudah melewatkan binding container.
+:::
+
+Untuk melihat alur request di dalam struktur ini, lanjutkan ke [Siklus Request](../architecture/request-lifecycle).

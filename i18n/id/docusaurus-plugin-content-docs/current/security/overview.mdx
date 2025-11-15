@@ -1,0 +1,58 @@
+---
+title: 'Ringkasan Keamanan'
+description: 'Lindungi aplikasi Flowra dengan pola autentikasi, konfigurasi aman, dan praktik operasional terbaik.'
+---
+
+Keamanan adalah tanggung jawab bersama antara framework dan tim Anda. Flowra menyediakan hook untuk menerapkan autentikasi, otorisasi, dan konfigurasi yang aman.
+
+## Pola autentikasi
+
+- **JWT atau session token** — Implementasikan middleware di `core/http/middleware/authenticate.ts` untuk memverifikasi token, me-resolve user via service, dan menambahkan konteks ke `req.user`.
+- **API key** — Gunakan middleware berbasis header yang memvalidasi key yang disimpan di database atau environment variable.
+- **Identity provider pihak ketiga** — Integrasi dengan OAuth/OIDC melalui handler callback di modul khusus dan tukarkan token melalui service.
+
+:::note Simpan secret dengan aman
+Jangan simpan secret langsung di kode. Ambil dari environment variable atau secret manager dan inject melalui container.
+:::
+
+## Otorisasi
+
+- Definisikan akses berbasis peran menggunakan middleware: `authorize('admin')` memeriksa konteks user dan menghentikan request yang tidak memiliki izin.
+- Untuk kebijakan granular, bungkus aturan dalam kelas policy di `app/modules/<domain>/policies`.
+- Log kegagalan otorisasi beserta metadata request untuk kebutuhan audit.
+
+## Konfigurasi aman
+
+- Gunakan berkas `.env` hanya untuk pengembangan lokal. Di produksi, injeksikan environment variable melalui orkestrator Anda.
+- Validasi environment variable kritis saat bootstrap (`config/app.ts`) dan gagal cepat jika nilai wajib tidak ada.
+- Rotasi key dan kredensial secara berkala; simpan metadata rotasi di konfigurasi atau secret manager.
+
+## Penguatan HTTP
+
+- Tambahkan security header (HSTS, CSP) menggunakan middleware seperti `helmet` di `http-kernel.ts`.
+- Terapkan HTTPS di load balancer atau reverse proxy.
+- Batasi rate endpoint sensitif (login, reset password) dengan middleware atau layanan upstream.
+
+## Logging dan audit
+
+- Gunakan logging terstruktur (pino) untuk menangkap identifier request, user ID, dan event penting.
+- Redaksi field sensitif sebelum logging dengan mengonfigurasi serializer pada logger.
+- Emit event audit saat tindakan privileg terjadi (mis. perubahan peran, pembaruan konfigurasi).
+
+## Keamanan secret dan environment
+
+- Atur permission berkas `.env` dan batasi riwayat shell.
+- Di CI/CD, gunakan secret khusus untuk setiap environment (dev/staging/prod).
+- Monitor kebocoran secret dengan scanner otomatis di pull request.
+
+## Kesiapan incident response
+
+- Sentralisasi pemantauan error (Sentry, New Relic) dan buat alert untuk sinyal terkait keamanan.
+- Jaga versi dependensi tetap terbaru; jalankan `npm audit` atau `pnpm audit` secara rutin.
+- Dokumentasikan runbook di repository untuk menangani kebocoran kredensial atau pengambilalihan akun.
+
+:::warning Prinsip least privilege
+Berikan layanan dan user database hanya izin yang diperlukan. Batasi akses jaringan antar modul dan layanan eksternal.
+:::
+
+Dengan menggabungkan autentikasi, otorisasi, kebersihan konfigurasi, dan monitoring, aplikasi Flowra tetap tangguh terhadap ancaman umum.

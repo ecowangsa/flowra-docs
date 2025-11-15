@@ -1,0 +1,118 @@
+---
+title: 'Installation & Setup'
+description: 'Prepare your environment, clone the Flowra scaffold, configure environments, and run the development server.'
+---
+
+This guide walks you through setting up Flowra locally using the official scaffold located on the `feature-scaffold` branch. By the end you will have the server running with database connections configured via Knex.
+
+## Prerequisites
+
+| Requirement | Notes |
+| --- | --- |
+| Node.js | v18 LTS or newer is recommended to leverage native fetch and stable ESM. |
+| Package manager | npm (bundled with Node.js) or Yarn v1.22+. |
+| Database | PostgreSQL 13+ or MySQL 8+; Flowra ships with Knex so any Knex-supported database works. |
+| Git | Needed to clone the repository and manage updates. |
+
+:::note Windows support
+Flowra is TypeScript-first and works well on Windows through WSL2. Ensure your database is reachable from Linux if you run services on Windows.
+:::
+
+## Clone the scaffold
+
+```bash
+git clone https://github.com/ecowangsa/flowra.git
+cd flowra
+git checkout feature-scaffold
+```
+
+The scaffold provides:
+
+- `app/` – feature modules, controllers, services, and jobs.
+- `core/` – framework internals such as the service container, HTTP kernel, and database utilities.
+- `main/` – bootstrap logic and entry points.
+- `bin/` – CLI entry script.
+
+## Install dependencies
+
+```bash
+npm install
+```
+
+If you prefer Yarn:
+
+```bash
+yarn install
+```
+
+Flowra uses TypeScript and ts-node for development, so the install step sets up compiler tooling, linting, and testing dependencies.
+
+## Configure environment variables
+
+Copy the example environment file and adjust values for your machine:
+
+```bash
+cp .env.example .env
+```
+
+Key variables include:
+
+- `APP_PORT` – Port where the HTTP server listens (default `3000`).
+- `APP_ENV` – Environment name (`local`, `staging`, `production`). Determines config overrides in `config/app.ts`.
+- `DATABASE_URL` – Connection string for the default Knex connection. Supports PostgreSQL, MySQL, and SQLite.
+- `READ_REPLICA_URL` – Optional secondary connection used for read-intensive workloads.
+- `LOG_LEVEL` – Controls pino logger verbosity.
+
+:::tip Environment segregation
+Use dedicated `.env` files per environment (`.env.local`, `.env.staging`) and load them via deployment tooling. Flowra reads from `process.env`, so any 12-factor compatible secret manager works.
+:::
+
+## Configure Knex
+
+The scaffold uses `config/database.ts` to map environment variables to Knex clients:
+
+```ts title="config/database.ts"
+export default {
+  default: {
+    client: 'pg',
+    connection: process.env.DATABASE_URL,
+    pool: {min: 2, max: 10},
+  },
+  reporting: {
+    client: 'pg',
+    connection: process.env.READ_REPLICA_URL,
+  },
+};
+```
+
+- Register additional connections (e.g., analytics, legacy databases) by adding new keys.
+- Inject a specific connection into services with `@inject('database.reporting')` or helper utilities.
+
+Flowra exposes a Knex factory via the container, so modules request connections instead of instantiating new clients.
+
+## Run migrations and seeds
+
+If the project includes migration files, run:
+
+```bash
+npm run knex migrate:latest
+npm run knex seed:run
+```
+
+These commands proxy to the Knex CLI configured in `package.json` and automatically read `config/database.ts`. Use the `--knexfile` flag if you maintain multiple configurations.
+
+## Start the development server
+
+```bash
+npm run dev
+```
+
+This command boots the service container, registers modules, and launches the HTTP server with hot reloading. Navigate to `http://localhost:3000/health` to verify everything works.
+
+:::warning Common setup pitfalls
+- Ensure your database user has privileges to create schemas and run migrations.
+- If you see `ECONNREFUSED`, double-check `DATABASE_URL` or that Docker Compose is running.
+- TypeScript compilation errors often stem from outdated build artifacts; run `npm run clean` before retrying.
+:::
+
+You're now ready to explore the [project structure](./project-structure) and build your [first API](./first-api).

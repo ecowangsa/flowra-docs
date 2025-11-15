@@ -1,0 +1,112 @@
+---
+title: 'Models & Queries'
+description: 'Build reusable data access layers on top of Knex, including CRUD operations, joins, and transactions.'
+---
+
+Flowra uses plain Knex for data access, encouraging you to create lightweight models or repositories tailored to your domain. Models encapsulate query logic and keep controllers and services free from SQL details.
+
+## Creating a model
+
+```ts title="app/modules/users/models/user-model.ts"
+import {inject, injectable} from 'tsyringe';
+import type {Knex} from 'knex';
+
+@injectable()
+export class UserModel {
+  constructor(@inject('database.default') private readonly db: Knex) {}
+
+  query() {
+    return this.db<UserRecord>('users');
+  }
+
+  async create(data: CreateUserInput) {
+    const [user] = await this.query()
+      .insert({...data})
+      .returning(['id', 'email', 'name', 'created_at']);
+    return user;
+  }
+
+  async findById(id: string) {
+    return this.query().where({id}).first();
+  }
+
+  async list({page, perPage}: {page: number; perPage: number}) {
+    return this.query()
+      .select('id', 'email', 'name', 'created_at')
+      .orderBy('created_at', 'desc')
+      .limit(perPage)
+      .offset((page - 1) * perPage);
+  }
+}
+
+export type UserRecord = {
+  id: string;
+  email: string;
+  name: string;
+  created_at: Date;
+};
+
+export type CreateUserInput = Pick<UserRecord, 'email' | 'name'>;
+```
+
+## Joins and aggregations
+
+```ts title="app/modules/orders/models/order-model.ts"
+async listWithTotals(userId: string) {
+  return this.db('orders as o')
+    .leftJoin('order_items as i', 'o.id', 'i.order_id')
+    .where('o.user_id', userId)
+    .groupBy('o.id')
+    .select('o.id', 'o.status')
+    .sum<{total: number}>({total: 'i.subtotal'});
+}
+```
+
+- Alias tables when joining to keep queries readable.
+- Use typed `.sum<{total: number}>` or `.count<{count: number}>` to inform TypeScript about result shapes.
+
+## Transactions
+
+Wrap related queries in transactions to ensure atomic updates:
+
+```ts
+await this.db.transaction(async trx => {
+  const [order] = await trx('orders').insert({...input}).returning('*');
+  await trx('order_items').insert(input.items.map(item => ({...item, order_id: order.id})));
+});
+```
+
+- Always return the transaction promise to let Knex manage commit/rollback.
+- Pass the transaction (`trx`) to dependent repositories if they need to participate.
+
+## Keeping SQL out of controllers
+
+Services call models instead of writing SQL directly:
+
+```ts title="app/modules/users/services/list-users-service.ts"
+import {injectable} from 'tsyringe';
+import {UserModel} from '../models/user-model';
+
+@injectable()
+export class ListUsersService {
+  constructor(private readonly users: UserModel) {}
+
+  async execute(input: {page: number; perPage: number}) {
+    return this.users.list(input);
+  }
+}
+```
+
+Controllers simply call `listUsersService.execute`, keeping HTTP logic separate from persistence concerns.
+
+## Patterns for complex queries
+
+- **Reusable scopes** — Create helper methods like `withActive()` that return a query builder with filters applied.
+- **Repositories per aggregate** — For large domains, create repositories that compose multiple models to build read models.
+- **Views and materialised views** — Use migrations to manage SQL views; models can query them just like tables.
+
+:::tip Use TypeScript types
+Define `type` aliases for model results to avoid repeating field lists across services and tests.
+:::
+
+By encapsulating SQL in models you gain reusable data access layers, safer refactoring, and more readable business logic.

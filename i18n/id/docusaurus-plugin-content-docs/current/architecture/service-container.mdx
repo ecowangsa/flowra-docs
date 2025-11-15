@@ -1,0 +1,128 @@
+---
+title: 'Service Container & Dependency Injection'
+description: 'Pelajari cara Flowra meregistrasikan dan me-resolve service, serta bagaimana DI meningkatkan keterujian dan modularitas.'
+---
+
+Service container Flowra menyediakan inversion of control untuk aplikasi Anda. Berbasis `tsyringe`, container ini mengelola lifecycle controller, service, dan objek infrastruktur.
+
+## Dasar container
+
+Container didefinisikan di `core/container/application-container.ts`. Saat bootstrap ia meregistrasikan:
+
+- Objek konfigurasi (`config/app.ts`, `config/database.ts`).
+- Service infrastruktur (HTTP server, logger, driver antrean).
+- Ekspor modul (controller, service, repository).
+
+Anda berinteraksi dengan container secara tidak langsung melalui dekorator dan helper. Dua dekorator terpenting:
+
+- `@injectable()` — Menandai kelas agar bisa di-resolve container.
+- `@inject(token)` — Meminta binding tertentu (berguna untuk interface atau resource bernama).
+
+## Meregistrasikan service
+
+Modul Flowra mengekspos `index.ts` yang melakukan binding kelas ke container. Contoh:
+
+```ts title="app/modules/payments/index.ts"
+import {container} from 'tsyringe';
+import {PaymentsController} from './controllers/payments-controller';
+import {CreatePaymentService} from './services/create-payment-service';
+
+export const registerPaymentModule = () => {
+  container.registerSingleton(PaymentsController);
+  container.registerSingleton(CreatePaymentService);
+};
+```
+
+Fungsi ini dipanggil saat bootstrap agar container mengetahui cara menginstansiasi kelas Anda.
+
+## Meng-inject dependensi ke controller
+
+Controller bergantung pada service melalui parameter constructor. Helper `useController` milik Flowra me-resolve controller dari container dan memanggil method yang diminta.
+
+```ts title="app/modules/payments/controllers/payments-controller.ts"
+import {injectable} from 'tsyringe';
+import type {Request, Response} from 'express';
+import {CreatePaymentService} from '../services/create-payment-service';
+
+@injectable()
+export class PaymentsController {
+  constructor(private readonly createPayment: CreatePaymentService) {}
+
+  async store(req: Request, res: Response) {
+    const payment = await this.createPayment.execute({
+      amount: req.body.amount,
+      currency: req.body.currency,
+    });
+    return res.status(201).json({data: payment});
+  }
+}
+```
+
+Tidak perlu `new CreatePaymentService()` manual—container menangani instansiasi dan injeksi.
+
+## Meng-inject infrastruktur
+
+Gunakan `@inject` untuk meminta binding bernama:
+
+```ts title="app/modules/payments/services/create-payment-service.ts"
+import {inject, injectable} from 'tsyringe';
+import type {Knex} from 'knex';
+import type {Logger} from 'pino';
+
+@injectable()
+export class CreatePaymentService {
+  constructor(
+    @inject('database.default') private readonly db: Knex,
+    @inject('logger') private readonly logger: Logger,
+  ) {}
+
+  async execute(input: {amount: number; currency: string}) {
+    this.logger.info({amount: input.amount}, 'Creating payment');
+    const [payment] = await this.db('payments')
+      .insert({...input})
+      .returning(['id', 'amount', 'currency', 'created_at']);
+    return payment;
+  }
+}
+```
+
+`database.default` diregistrasikan ke container ketika koneksi Knex dikonfigurasi.
+
+## Pengujian bersama container
+
+Container memudahkan penggantian implementasi nyata dengan mock saat testing:
+
+```ts title="app/modules/payments/__tests__/create-payment-service.test.ts"
+import {container} from 'tsyringe';
+import {CreatePaymentService} from '../services/create-payment-service';
+
+describe('CreatePaymentService', () => {
+  beforeEach(() => {
+    container.clearInstances();
+    container.registerInstance('database.default', {
+      insert: () => ({returning: () => Promise.resolve([{id: '1', amount: 100, currency: 'USD'}])}),
+    });
+    container.registerInstance('logger', {info: jest.fn()});
+  });
+
+  it('creates a payment record', async () => {
+    const service = container.resolve(CreatePaymentService);
+    const result = await service.execute({amount: 100, currency: 'USD'});
+    expect(result.amount).toBe(100);
+  });
+});
+```
+
+Anda juga dapat memakai helper khusus dari `core/testing` untuk mem-boot container aplikasi terisolasi selama uji integrasi.
+
+:::tip Reset state
+Gunakan `container.clearInstances()` di hook test untuk mencegah kebocoran state antar test. Flowra meregistrasikan singleton, sehingga clear memastikan tiap test mulai dari kondisi bersih.
+:::
+
+## Manfaat
+
+- **Keterujian** — Constructor injection membuat dependensi eksplisit sehingga unit test lebih fokus.
+- **Keterlacakan** — Anda dapat memeriksa binding container untuk melihat service yang tersedia.
+- **Fleksibilitas** — Ganti implementasi (mis. driver cache) dengan mengubah binding tanpa memodifikasi konsumen.
+
+Menguasai service container membuka fleksibilitas Flowra—mulai dari controller HTTP hingga job background semuanya mengalir melaluinya.

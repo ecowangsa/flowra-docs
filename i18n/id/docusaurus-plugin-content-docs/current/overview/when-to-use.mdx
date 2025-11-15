@@ -1,0 +1,42 @@
+---
+title: 'Kapan Harus Menggunakan Flowra?'
+description: 'Panduan untuk menentukan apakah Flowra cocok dengan produk, tim, dan arsitektur Anda.'
+---
+
+Flowra bersinar ketika Anda membutuhkan tulang punggung API yang akan terus berkembang bersama organisasi. Gunakan daftar berikut untuk menilai apakah framework ini sesuai dengan target Anda.
+
+## Skenario ideal
+
+- **Aplikasi bisnis.** Produk multi-tim dengan dashboard, workflow, dan integrasi pihak ketiga memanfaatkan batas modul Flowra yang jelas dan scaffolding CLI.
+- **Marketplace dan sistem multi-tenant.** Service container memudahkan resolusi service yang sadar tenant, sementara Knex mendukung koneksi database per-tenant.
+- **Platform internal.** Jika banyak squad berkontribusi ke backend yang sama, konvensi Flowra menjaga konsistensi kontribusi.
+- **API dengan tata kelola ketat.** Lingkungan yang membutuhkan dependensi teraudit, bootstrap terprediksi, dan build terulang cocok dengan dependency injection serta lapisan konfigurasi Flowra.
+
+## Saat Flowra terasa berlebihan
+
+Flowra menambah struktur dan tooling yang mungkin tidak diperlukan untuk:
+
+- Prototipe jangka pendek atau proyek hackathon.
+- Otomasi fungsi tunggal atau cron job sederhana.
+- Runtime edge di mana overhead service container melebihi manfaatnya.
+
+Dalam kasus ini, gunakan Express, Fastify, atau fungsi serverless untuk setup minimal.
+
+:::note Alternatif ringan
+Modul Flowra dapat mengekspos handler ringan ketika Anda perlu turun di bawah framework. Anda tetap berbagi konfigurasi dan service sambil menulis router Express polos untuk jalur panas ber-throughput tinggi.
+:::
+
+## Tips migrasi dari aplikasi Express
+
+Migrasi bertahap menjaga risiko tetap rendah:
+
+1. **Adopsi layout Flowra.** Pindahkan satu fitur ke `app/modules/<feature>` dengan pemisahan controller/service. Sisanya biarkan apa adanya.
+2. **Perkenalkan container.** Bungkus bootstrap server lama dengan container Flowra dan registrasikan modul yang sudah dimigrasi. Secara bertahap resolusikan utilitas bersama (mis. logger, cache) melalui container.
+3. **Standarkan akses data.** Konfigurasikan Knex lewat `config/database.ts` dan ubah model atau repository agar memakai koneksi bersama.
+4. **Manfaatkan CLI.** Generate controller, service, dan migration untuk fitur baru guna mencegah kembali ke pola ad-hoc.
+
+:::tip Migrasi berdampingan
+Karena Flowra dibangun di atas Express, Anda dapat memasang router lama ke dalam modul Flowra. Ini memungkinkan tim memigrasikan grup route satu per satu tanpa mengganggu konsumen.
+:::
+
+Jika roadmap Anda akan meluas dalam lingkup atau ukuran tim, mengadopsi Flowra sejak dini memberi fondasi kuat sebelum kompleksitas datang.

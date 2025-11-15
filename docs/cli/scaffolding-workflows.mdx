@@ -1,0 +1,75 @@
+---
+title: 'Scaffolding Workflows'
+description: 'End-to-end workflows that use the Flowra CLI to deliver new features quickly.'
+---
+
+The Flowra CLI accelerates team workflows by generating consistent modules, tests, and migrations. Below are recommended playbooks you can adapt for your organisation.
+
+## Workflow 1: New domain module
+
+1. **Generate the module**
+   ```bash
+   npx flowra make:module billing
+   ```
+2. **Create supporting resources**
+   ```bash
+   npx flowra make:controller billing invoice
+   npx flowra make:service billing create-invoice
+   npx flowra make:migration create_invoices_table
+   ```
+3. **Implement business logic**
+   - Fill in the controller and service classes.
+   - Add a model (`app/modules/billing/models/invoice-model.ts`).
+4. **Wire routes and register module** in `main/bootstrap.ts`.
+5. **Write tests** using generated stubs in `__tests__`.
+6. **Run migrations and seeds** to populate sample data.
+
+:::tip Branch discipline
+Commit generated scaffolding before adding logic. It makes reviews easier and keeps diffs focused.
+:::
+
+## Workflow 2: Expand an existing feature
+
+1. **Add a service and controller method**
+   ```bash
+   npx flowra make:service users reset-password
+   npx flowra make:controller users reset-password
+   ```
+2. **Update routes**
+   - Register a new endpoint in `app/modules/users/routes.ts`.
+3. **Add validation**
+   - Create a validator in `validators/reset-password-schema.ts`.
+4. **Adjust container bindings**
+   - Ensure the module's `index.ts` exports the new classes.
+5. **Write integration tests**
+   - Use CLI-generated test stubs or create new ones under `__tests__`.
+
+## Workflow 3: Background job pipeline
+
+1. **Generate a module with job support**
+   ```bash
+   npx flowra make:module reports
+   ```
+2. **Create a queue worker**
+   - Add a job class in `app/modules/reports/jobs/generate-report-job.ts`.
+3. **Expose a CLI task**
+   ```bash
+   npx flowra make:command reports:generate
+   ```
+4. **Schedule the job**
+   - Register the command in `app/commands/index.ts` and integrate with your scheduler (e.g., cron, BullMQ).
+5. **Test end-to-end**
+   - Write tests that enqueue jobs and assert outputs in storage or email.
+
+## Productivity tips
+
+- **Use dry runs** — Many generators accept `--dry-run` to preview files without writing them.
+- **Custom templates** — Tailor files in `resources/templates` to enforce security headers, logging, or telemetry by default.
+- **Pair with linting** — Run `npm run lint` after scaffolding to catch formatting issues early.
+- **Script common sequences** — Wrap CLI commands in npm scripts (e.g., `npm run make:feature users`) to capture team conventions.
+
+:::warning Review generated code
+Scaffolding jumpstarts development but still requires review. Verify dependency bindings, test coverage, and data access patterns before merging.
+:::
+
+By standardising workflows, teams deliver features faster while keeping Flowra applications consistent and maintainable.

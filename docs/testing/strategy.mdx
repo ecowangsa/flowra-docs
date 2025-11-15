@@ -1,0 +1,93 @@
+---
+title: 'Testing Strategy'
+description: 'Design a pragmatic testing pyramid for Flowra applications with unit, integration, and end-to-end tests.'
+---
+
+A reliable test suite ensures Flowra modules remain stable as features evolve. This guide outlines how to structure tests and run them with the provided tooling.
+
+## Test commands
+
+```bash
+npm test
+npm run test:watch
+```
+
+The scaffold uses Jest with ts-jest for TypeScript support. Configure scripts in `package.json` to run unit and integration tests.
+
+## Testing pyramid
+
+| Layer | Purpose | Tooling |
+| --- | --- | --- |
+| Unit tests | Validate services and helpers in isolation | Jest + ts-jest |
+| Integration tests | Exercise controllers, middleware, and database interactions | supertest + Knex test database |
+| End-to-end tests | Optional; validate workflows via HTTP or CLI | Playwright, Postman, or contract tests |
+
+## Unit tests
+
+- Test services by mocking dependencies using the service container (`container.registerInstance`).
+- Use factory functions or fixtures to create test data.
+- Focus on business rules and edge cases without hitting the database.
+
+```ts title="app/modules/users/__tests__/create-user-service.test.ts"
+import {container} from 'tsyringe';
+import {CreateUserService} from '../services/create-user-service';
+
+describe('CreateUserService', () => {
+  beforeEach(() => {
+    container.clearInstances();
+    container.registerInstance('database.default', {
+      insert: () => ({returning: () => Promise.resolve([{id: '1', email: 'demo@flowra.dev'}])}),
+    });
+  });
+
+  it('creates a user', async () => {
+    const service = container.resolve(CreateUserService);
+    const user = await service.execute({email: 'demo@flowra.dev', name: 'Demo'});
+    expect(user.email).toBe('demo@flowra.dev');
+  });
+});
+```
+
+## Integration tests
+
+- Use `core/testing/http-test-factory.ts` to bootstrap an Express app with an in-memory or test database.
+- Seed data via Knex before each test using transactions or dedicated seed scripts.
+- Assert HTTP status codes, response payloads, and side effects (database mutations, queued jobs).
+
+```ts title="app/modules/users/__tests__/users-routes.test.ts"
+import request from 'supertest';
+import {createTestApp} from '../../../core/testing/http-test-factory';
+
+describe('Users routes', () => {
+  it('creates and lists users', async () => {
+    const app = await createTestApp();
+    await request(app).post('/users').send({email: 'demo@flowra.dev', name: 'Demo'}).expect(201);
+    const response = await request(app).get('/users').expect(200);
+    expect(response.body.data).toHaveLength(1);
+  });
+});
+```
+
+## End-to-end tests
+
+- Target critical user journeys (sign-up, checkout, reporting).
+- Run against staging environments or ephemeral preview deployments.
+- Use environment variables to point tests to the correct base URL.
+
+## Test data management
+
+- Use Knex transactions to wrap integration tests and rollback changes automatically.
+- Create factory helpers in `core/testing/factories` to generate consistent fixtures.
+- Prefer lightweight seeds over large SQL dumps.
+
+## Continuous integration
+
+- Run `npm test` on every pull request.
+- Parallelise suites (unit vs integration) to reduce runtime.
+- Publish coverage reports to track regressions.
+
+:::warning Keep tests deterministic
+Avoid relying on network calls or current timestamps without control. Mock external services and freeze time with utilities like `jest.useFakeTimers()`.
+:::
+
+By investing in a layered testing strategy, Flowra teams can refactor confidently and catch regressions before they reach production.

@@ -1,0 +1,72 @@
+---
+title: 'Modules & Domain Boundaries'
+description: 'Design modules that capture business domains, share contracts, and scale with your organisation.'
+---
+
+Modules are Flowra's primary building block. Each module encapsulates HTTP entry points, domain logic, and infrastructure integration for a single business capability. Treat modules as mini applications with clear inputs and outputs.
+
+## What defines a module?
+
+A module typically includes:
+
+- A `routes.ts` file that registers Express routes.
+- Controllers responsible for translating HTTP requests into service calls.
+- Services that encode domain rules.
+- Models or repositories that talk to the database using Knex.
+- Optional validators, transformers, events, or subscribers.
+
+Modules should own their data contracts and avoid reaching into other modules' internals. When modules need to collaborate, they do so through service interfaces or shared events.
+
+## Examples from the scaffold
+
+The Flowra scaffold ships with example modules:
+
+- **Health** — Minimal module exposing a health check endpoint.
+- **Users** — Demonstrates CRUD operations, request validation, and service composition.
+- **Tasks** — Illustrates background job dispatching alongside HTTP endpoints.
+
+Use these modules as references when creating new bounded contexts.
+
+## Structuring large domains
+
+For complex products, split domains into submodules:
+
+```text
+app/modules/billing/
+├─ invoices/
+│  ├─ controllers/
+│  ├─ services/
+│  └─ routes.ts
+├─ subscriptions/
+│  ├─ controllers/
+│  ├─ services/
+│  └─ routes.ts
+└─ shared/
+   ├─ pricing-service.ts
+   └─ billing-events.ts
+```
+
+- Shared utilities live in a `shared/` folder inside the domain.
+- Expose a root `registerBillingModule` that registers submodules and shared services.
+- Keep cross-domain communication explicit—use events, queues, or service interfaces instead of direct imports.
+
+:::tip Use prefixes for tokens
+When registering bindings in large modules, prefix tokens (e.g., `billing.pricing-service`) to avoid collisions with other modules.
+:::
+
+## Communication patterns
+
+| Pattern | When to use | Notes |
+| --- | --- | --- |
+| Service calls | Synchronous request/response between modules | Register the callee service in the container and inject it where needed. |
+| Domain events | Decouple workflows with pub/sub semantics | Emit events inside services and handle them in other modules or job workers. |
+| Shared libraries | Common utilities (validation schemas, DTOs) | Place in `app/services` or a domain `shared/` folder; avoid circular dependencies. |
+
+## Module boundaries checklist
+
+- Each module has a single purpose and aligns with business language.
+- Controllers never import other modules' controllers or services directly.
+- Shared state is accessed through injected services, not via global singletons.
+- Tests live next to the module to keep context close.
+
+Designing modules thoughtfully keeps teams autonomous and makes refactoring less risky as the codebase grows.

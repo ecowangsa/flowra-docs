@@ -1,0 +1,91 @@
+---
+title: 'Panduan Deployment'
+description: 'Siapkan aplikasi Flowra untuk produksi dan deploy ke lingkungan Docker, VPS, atau PaaS.'
+---
+
+Deployment yang andal menjaga service Flowra tetap tersedia dan konsisten. Panduan ini mencakup langkah build, manajemen environment, dan opsi deployment.
+
+## Build untuk produksi
+
+```bash
+npm run build
+npm run start
+```
+
+- `npm run build` mengompilasi TypeScript ke JavaScript (biasanya keluar di `dist/`).
+- `npm run start` menjalankan server hasil kompilasi dengan konfigurasi produksi.
+
+:::note Deteksi environment
+Flowra membaca `APP_ENV` untuk menyesuaikan level logging, pengaturan database, dan caching. Set nilainya ke `production` pada lingkungan live.
+:::
+
+## Manajemen environment
+
+- **Berkas .env** — Gunakan `.env.local` untuk pengembangan. Di produksi, injeksikan variabel melalui infrastruktur Anda (Docker secrets, Kubernetes ConfigMap, dashboard PaaS).
+- **Variabel utama** — `APP_PORT`, `APP_ENV`, `DATABASE_URL`, `READ_REPLICA_URL`, `LOG_LEVEL`, `JWT_SECRET`.
+- **Override konfigurasi** — Tambahkan override khusus environment di `config/app.ts` atau buat modul `config/<env>.ts` dan muat secara kondisional.
+
+## Migration database
+
+Sebelum server berjalan jalankan migration:
+
+```bash
+npm run knex migrate:latest
+```
+
+Otomatiskan langkah ini di pipeline CI/CD atau skrip entrypoint. Untuk deploy tanpa downtime, jalankan migration pada jendela maintenance atau gunakan DDL transaksional.
+
+## Opsi deployment
+
+### Docker
+
+Contoh `Dockerfile`:
+
+```Dockerfile
+FROM node:18-alpine AS build
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci
+COPY . .
+RUN npm run build
+
+FROM node:18-alpine
+WORKDIR /app
+ENV NODE_ENV=production
+COPY --from=build /app/package*.json ./
+RUN npm ci --omit=dev
+COPY --from=build /app/dist ./dist
+CMD ["node", "dist/main/server.js"]
+```
+
+- Gunakan multi-stage build agar image runtime tetap kecil.
+- Inject environment variable melalui Docker secrets atau konfigurasi orkestrator.
+
+### VPS atau bare metal
+
+1. Instal Node.js LTS dan process manager (PM2, systemd).
+2. Clone repository, jalankan `npm ci`, `npm run build`.
+3. Konfigurasikan `.env` dan jalankan server: `pm2 start dist/main/server.js --name flowra`.
+4. Gunakan nginx atau Caddy sebagai reverse proxy dengan terminasi SSL.
+
+### PaaS (Heroku, Render, Railway)
+
+- Atur perintah build `npm run build` dan start `npm run start`.
+- Set environment variable melalui dashboard platform.
+- Gunakan layanan Postgres atau MySQL terkelola dan set `DATABASE_URL` sesuai.
+
+## Checklist produksi
+
+- [ ] Environment variable terisi dengan nilai aman.
+- [ ] Migration database sukses dijalankan.
+- [ ] Endpoint health check dipantau (`/health`).
+- [ ] Logging sink terkonfigurasi (stdout atau aggregator eksternal).
+- [ ] Alerting untuk error dan metrik performa aktif.
+- [ ] Rate limiting untuk endpoint sensitif diaktifkan.
+- [ ] Sertifikat SSL valid dan auto-renew.
+
+:::warning Pertimbangan cold start
+Jika berjalan di platform serverless, pastikan koneksi database dipool dengan benar dan pertimbangkan penghangat koneksi.
+:::
+
+Dengan langkah build yang konsisten dan otomasi, deployment Flowra menjadi repetitif di lingkungan staging maupun produksi.

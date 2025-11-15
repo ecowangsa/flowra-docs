@@ -1,0 +1,42 @@
+---
+title: 'FAQ'
+description: 'Pertanyaan yang sering muncul seputar adopsi dan operasional Flowra.'
+---
+
+## Bisakah saya memakai Flowra tanpa TypeScript?
+
+Flowra dibangun dengan TypeScript sebagai inti. Anda bisa mengompilasi sumber JavaScript, namun akan kehilangan metadata dekorator dan keamanan tipe. Kami menyarankan tetap menggunakan TypeScript demi integrasi container dan dukungan IDE.
+
+## Bagaimana cara menambah modul baru?
+
+Gunakan CLI:
+
+```bash
+npx flowra make:module <name>
+```
+
+Kemudian registrasikan route modul di `main/bootstrap.ts`.
+
+## Apakah Flowra mendukung banyak database?
+
+Ya. Definisikan koneksi tambahan di `config/database.ts` dan inject menggunakan `@inject('database.<name>')`. Kelola migration per koneksi dengan berkas konfigurasi Knex terpisah.
+
+## Bisakah Flowra berjalan di lingkungan serverless?
+
+Flowra dapat berjalan di platform serverless selama koneksi database dikelola dengan hati-hati. Gunakan proxy pooling (mis. PgBouncer) dan jaga bootstrap container tetap ringan agar cold start minim.
+
+## Bagaimana menangani job background?
+
+Gunakan CLI untuk menscaffold modul job dan integrasikan dengan library antrean seperti BullMQ. Registrasikan instance antrean di container agar job dan handler HTTP berbagi konfigurasi.
+
+## Apakah Flowra memiliki admin panel bawaan?
+
+Flowra fokus pada arsitektur backend dan tidak menyertakan UI admin. Anda dapat mengintegrasikan dashboard populer atau membangun frontend khusus yang mengonsumsi API Flowra.
+
+## Bagaimana cara upgrade Flowra?
+
+Cek catatan rilis, perbarui dependensi melalui `npm install flowra@latest`, dan jalankan migration yang disediakan bila ada. Tinjau breaking change pada changelog sebelum deployment.
+
+## Di mana saya bisa meminta bantuan?
+
+Buka diskusi atau issue di [GitHub](https://github.com/ecowangsa/flowra) dan bergabunglah dengan kanal komunitas yang diumumkan di README repository.

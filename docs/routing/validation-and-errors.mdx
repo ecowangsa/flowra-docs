@@ -1,0 +1,127 @@
+---
+title: 'Validation & Error Handling'
+description: 'Implement consistent request validation and transform exceptions into predictable HTTP responses.'
+---
+
+Flowra encourages validating input at module boundaries and mapping errors to structured responses. Doing so keeps controllers clean and gives clients reliable feedback.
+
+## Request validation strategies
+
+Flowra does not enforce a specific validation library, but the scaffold demonstrates patterns using Zod and custom validators.
+
+### Schema-based validation
+
+Create a schema and middleware to validate incoming payloads:
+
+```ts title="app/modules/users/validators/create-user-schema.ts"
+import {z} from 'zod';
+
+export const createUserSchema = z.object({
+  email: z.string().email(),
+  name: z.string().min(2),
+});
+```
+
+```ts title="core/http/middleware/validate.ts"
+import type {AnyZodObject} from 'zod';
+import type {Request, Response, NextFunction} from 'express';
+import {ValidationException} from '../validation-exception';
+
+export const validate = (schema: AnyZodObject) =>
+  (req: Request, _res: Response, next: NextFunction) => {
+    const result = schema.safeParse(req.body);
+    if (!result.success) {
+      throw new ValidationException(result.error.flatten());
+    }
+    req.body = result.data;
+    next();
+  };
+```
+
+Apply the middleware in `routes.ts`:
+
+```ts
+router.post('/users', validate(createUserSchema), useController(UsersController, 'store'));
+```
+
+:::tip Validate at the edge
+Run validation before controllers execute. Services should receive already-sanitised inputs to keep domain logic free from HTTP concerns.
+:::
+
+### Custom validators
+
+For complex scenarios (e.g., dependency on database state) create dedicated validator services or middleware that rely on the container to access repositories.
+
+## Error handling pipeline
+
+Errors thrown during request processing bubble to `core/http/error-handler.ts`:
+
+```ts title="core/http/error-handler.ts"
+import type {Request, Response, NextFunction} from 'express';
+import {ValidationException} from './validation-exception';
+
+export const errorHandler = (err: unknown, _req: Request, res: Response, _next: NextFunction) => {
+  if (err instanceof ValidationException) {
+    return res.status(422).json({
+      error: 'ValidationError',
+      details: err.details,
+    });
+  }
+
+  if (err instanceof DomainException) {
+    return res.status(err.statusCode).json({
+      error: err.code,
+      message: err.message,
+    });
+  }
+
+  console.error(err);
+  return res.status(500).json({error: 'InternalServerError'});
+};
+```
+
+- Register the handler after routes in `http-kernel.ts`.
+- Extend the handler to support domain-specific exceptions (e.g., `NotFoundException`).
+
+## Designing exception classes
+
+Create lightweight exception classes to represent domain errors:
+
+```ts title="core/http/exceptions/not-found-exception.ts"
+export class NotFoundException extends Error {
+  code = 'NotFound';
+  statusCode = 404;
+
+  constructor(message = 'Resource not found') {
+    super(message);
+  }
+}
+```
+
+Throw them from services:
+
+```ts
+default async execute(id: string) {
+  const user = await this.model.find(id);
+  if (!user) {
+    throw new NotFoundException('User not found');
+  }
+  return user;
+}
+```
+
+## Error response guidelines
+
+| Situation | Recommended response |
+| --- | --- |
+| Validation failure | 422 status with `error`, `message`, and `details` containing field errors. |
+| Authentication failure | 401 status with `WWW-Authenticate` header. |
+| Authorisation failure | 403 status and a clear message describing the missing permission. |
+| Not found | 404 status with resource identifier if available. |
+| Unexpected error | 500 status with correlation ID in headers for tracing. |
+
+:::warning Never expose stack traces in production
+Log detailed errors server-side and return only safe messages to clients. Use correlation IDs or log IDs for debugging.
+:::
+
+By standardising validation and error handling, teams ship APIs that are easier to integrate with and simpler to debug.

@@ -1,0 +1,72 @@
+---
+title: 'Modul & Batas Domain'
+description: 'Rancang modul yang menangkap domain bisnis, berbagi kontrak, dan tumbuh bersama organisasi Anda.'
+---
+
+Modul adalah blok bangunan utama Flowra. Setiap modul mengenkapsulasi entry point HTTP, logika domain, dan integrasi infrastruktur untuk satu kapabilitas bisnis. Perlakukan modul sebagai mini aplikasi dengan input dan output jelas.
+
+## Apa yang mendefinisikan modul?
+
+Modul umumnya berisi:
+
+- Berkas `routes.ts` untuk mendaftarkan route Express.
+- Controller yang menerjemahkan HTTP request menjadi panggilan service.
+- Service yang menyandikan aturan domain.
+- Model atau repository yang berinteraksi dengan database via Knex.
+- Validator, transformer, event, atau subscriber opsional.
+
+Modul harus memiliki kontrak data sendiri dan menghindari mengakses internal modul lain. Jika modul perlu berkolaborasi, lakukan melalui interface service atau event bersama.
+
+## Contoh dari scaffold
+
+Scaffold Flowra menyertakan modul contoh:
+
+- **Health** — Modul minimal yang mengekspos endpoint health check.
+- **Users** — Menunjukkan operasi CRUD, validasi request, dan komposisi service.
+- **Tasks** — Mengilustrasikan dispatch job background berdampingan dengan endpoint HTTP.
+
+Gunakan modul-modul ini sebagai referensi saat membuat bounded context baru.
+
+## Menyusun domain besar
+
+Untuk produk kompleks, pecah domain menjadi submodul:
+
+```text
+app/modules/billing/
+├─ invoices/
+│  ├─ controllers/
+│  ├─ services/
+│  └─ routes.ts
+├─ subscriptions/
+│  ├─ controllers/
+│  ├─ services/
+│  └─ routes.ts
+└─ shared/
+   ├─ pricing-service.ts
+   └─ billing-events.ts
+```
+
+- Utilitas bersama tinggal di folder `shared/` dalam domain.
+- Ekspose `registerBillingModule` yang mendaftarkan submodul dan service bersama.
+- Jaga komunikasi lintas domain tetap eksplisit—gunakan event, antrean, atau interface service alih-alih import langsung.
+
+:::tip Gunakan prefix token
+Saat meregistrasikan binding di modul besar, beri prefix token (mis. `billing.pricing-service`) untuk menghindari tabrakan dengan modul lain.
+:::
+
+## Pola komunikasi
+
+| Pola | Kapan digunakan | Catatan |
+| --- | --- | --- |
+| Panggilan service | Kebutuhan sinkron antar modul | Registrasikan service yang dipanggil di container lalu inject di tempat yang diperlukan. |
+| Event domain | Memutus workflow dengan pub/sub | Emit event di dalam service dan tangani di modul lain atau worker job. |
+| Library bersama | Utilitas umum (skema validasi, DTO) | Tempatkan di `app/services` atau folder `shared/` domain; hindari dependensi melingkar. |
+
+## Checklist batas modul
+
+- Setiap modul memiliki tujuan tunggal dan selaras dengan bahasa bisnis.
+- Controller tidak pernah mengimport controller atau service modul lain secara langsung.
+- State bersama diakses melalui service yang di-inject, bukan singleton global.
+- Test berada dekat modul agar konteks tetap dekat.
+
+Perancangan modul yang matang menjaga tim tetap otonom dan membuat refactor lebih aman saat basis kode tumbuh.

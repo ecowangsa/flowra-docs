@@ -1,0 +1,74 @@
+---
+title: 'Ringkasan Flowra CLI'
+description: 'Pahami entrypoint CLI Flowra, konfigurasi, dan daftar perintah yang tersedia.'
+---
+
+Flowra hadir dengan CLI berbasis TypeScript yang berada di `bin/flowra.ts`. CLI ini me-bootstrap service container, menemukan perintah, dan menyediakan generator untuk mengotomatiskan tugas berulang.
+
+## Entrypoint CLI
+
+```ts title="bin/flowra.ts"
+import 'reflect-metadata';
+import {Command} from 'commander';
+import {registerCommands} from '../app/commands';
+
+const program = new Command();
+program.name('flowra').description('Flowra command line interface').version('1.0.0');
+
+registerCommands(program);
+
+program.parseAsync();
+```
+
+- `reflect-metadata` mengaktifkan dekorator yang digunakan service container.
+- Perintah berada di `app/commands` dan mendaftarkan diri ke Commander.
+
+## Penemuan perintah
+
+Setiap perintah mengekspor fungsi yang menerima instance program Commander:
+
+```ts title="app/commands/make-module.ts"
+import type {Command} from 'commander';
+import {scaffoldModule} from '../scaffolding/module-generator';
+
+export const registerMakeModuleCommand = (program: Command) => {
+  program
+    .command('make:module <name>')
+    .description('Generate a module with controller, service, routes, and tests')
+    .action(async name => {
+      await scaffoldModule(name);
+      console.log(`Module ${name} created.`);
+    });
+};
+```
+
+`registerCommands(program)` mengimpor seluruh modul command dan memanggil fungsi registrasinya.
+
+## Perintah yang tersedia
+
+| Perintah | Deskripsi |
+| --- | --- |
+| `flowra make:module <name>` | Membuat skeleton modul berisi controller, service, model, dan test. |
+| `flowra make:controller <module> <name>` | Menambahkan controller ke modul yang sudah ada. |
+| `flowra make:service <module> <name>` | Menghasilkan kelas service baru dan memperbarui binding container. |
+| `flowra make:migration <name>` | Membuat migration Knex bertimestamp. |
+| `flowra make:seed <name>` | Menghasilkan skrip seed untuk data test atau demo. |
+| `flowra list` | Menampilkan modul dan route yang terdaftar (berguna untuk audit). |
+| `flowra dev` | Menyalakan development server dengan hot reload (alias `npm run dev`). |
+
+:::note Perintah kustom
+Tambahkan perintah baru di `app/commands`. Pastikan mereka memanggil utilitas scaffolding reusable yang disimpan di `resources/templates` saat membuat berkas.
+:::
+
+## Konfigurasi dan template
+
+- `resources/templates` menyimpan stub yang digunakan generator (controller, service, test).
+- Perbarui template untuk menerapkan standar coding tim Anda.
+- Gunakan placeholder seperti `__MODULE__` dalam template lalu ganti secara programatis di generator.
+
+## Penanganan error dan logging
+
+- Bungkus aksi command async dalam try/catch agar pesan error ramah pengguna.
+- Gunakan logger bersama (`container.resolve('logger')`) ketika command membutuhkan logging terstruktur.
+
+CLI adalah tulang punggung otomasi proyek Flowra—kuasai dan jaga agar selalu selaras dengan evolusi arsitektur Anda.

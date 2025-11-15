@@ -1,0 +1,118 @@
+---
+title: 'Instalasi & Setup'
+description: 'Siapkan lingkungan, kloning scaffold Flowra, konfigurasi environment, dan jalankan server development.'
+---
+
+Panduan ini membantu Anda menyiapkan Flowra secara lokal menggunakan scaffold resmi pada branch `feature-scaffold`. Di akhir langkah Anda sudah bisa menjalankan server dengan koneksi database yang diatur melalui Knex.
+
+## Prasyarat
+
+| Kebutuhan | Catatan |
+| --- | --- |
+| Node.js | Disarankan versi v18 LTS atau lebih baru untuk memanfaatkan native fetch dan ESM stabil. |
+| Package manager | npm (bundled dengan Node.js) atau Yarn v1.22+. |
+| Database | PostgreSQL 13+ atau MySQL 8+; Flowra menggunakan Knex sehingga database lain yang didukung Knex juga bisa. |
+| Git | Diperlukan untuk mengkloning repository dan mengambil pembaruan. |
+
+:::note Dukungan Windows
+Flowra berfokus pada TypeScript dan berjalan baik di Windows melalui WSL2. Pastikan database Anda dapat diakses dari Linux jika service berjalan di Windows.
+:::
+
+## Kloning scaffold
+
+```bash
+git clone https://github.com/ecowangsa/flowra.git
+cd flowra
+git checkout feature-scaffold
+```
+
+Scaffold menyediakan:
+
+- `app/` – modul fitur, controller, service, dan job.
+- `core/` – internal framework seperti service container, HTTP kernel, dan utilitas database.
+- `main/` – logika bootstrap dan entry point.
+- `bin/` – skrip entry CLI.
+
+## Instal dependensi
+
+```bash
+npm install
+```
+
+Jika menggunakan Yarn:
+
+```bash
+yarn install
+```
+
+Flowra memakai TypeScript dan ts-node saat development, sehingga langkah instalasi menyiapkan tooling compiler, linting, dan testing.
+
+## Konfigurasi environment variable
+
+Salin berkas contoh environment lalu sesuaikan dengan mesin Anda:
+
+```bash
+cp .env.example .env
+```
+
+Variabel penting meliputi:
+
+- `APP_PORT` – Port tempat server HTTP mendengarkan (default `3000`).
+- `APP_ENV` – Nama environment (`local`, `staging`, `production`). Mengendalikan override di `config/app.ts`.
+- `DATABASE_URL` – Connection string untuk koneksi Knex default. Mendukung PostgreSQL, MySQL, dan SQLite.
+- `READ_REPLICA_URL` – Koneksi sekunder opsional untuk workload baca.
+- `LOG_LEVEL` – Mengatur tingkat verbositas logger pino.
+
+:::tip Pisahkan environment
+Gunakan berkas `.env` per environment (`.env.local`, `.env.staging`) dan muat melalui tooling deployment. Flowra membaca `process.env`, sehingga secret manager 12-factor kompatibel dapat digunakan.
+:::
+
+## Konfigurasi Knex
+
+Scaffold memakai `config/database.ts` untuk memetakan environment variable ke client Knex:
+
+```ts title="config/database.ts"
+export default {
+  default: {
+    client: 'pg',
+    connection: process.env.DATABASE_URL,
+    pool: {min: 2, max: 10},
+  },
+  reporting: {
+    client: 'pg',
+    connection: process.env.READ_REPLICA_URL,
+  },
+};
+```
+
+- Tambahkan koneksi lain (mis. analytics, legacy) dengan menambahkan key baru.
+- Inject koneksi tertentu ke service menggunakan `@inject('database.reporting')` atau helper terkait.
+
+Flowra mengekspos factory Knex via container sehingga modul meminta koneksi alih-alih membuat client baru.
+
+## Jalankan migration dan seed
+
+Jika proyek memiliki migration, jalankan:
+
+```bash
+npm run knex migrate:latest
+npm run knex seed:run
+```
+
+Perintah ini memanggil Knex CLI yang dikonfigurasi di `package.json` dan otomatis membaca `config/database.ts`. Gunakan flag `--knexfile` bila Anda memelihara beberapa konfigurasi.
+
+## Jalankan server development
+
+```bash
+npm run dev
+```
+
+Perintah ini menyalakan service container, meregistrasikan modul, dan menjalankan server HTTP dengan hot reload. Buka `http://localhost:3000/health` untuk memastikan semuanya berfungsi.
+
+:::warning Kendala umum saat setup
+- Pastikan user database memiliki hak membuat schema dan menjalankan migration.
+- Jika muncul `ECONNREFUSED`, cek ulang `DATABASE_URL` atau pastikan Docker Compose aktif.
+- Error kompilasi TypeScript sering berasal dari artefak build lama; jalankan `npm run clean` sebelum mencoba lagi.
+:::
+
+Sekarang Anda siap mempelajari [struktur proyek](./project-structure) dan membangun [API pertama](./first-api).

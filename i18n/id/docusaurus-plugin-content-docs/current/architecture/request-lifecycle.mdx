@@ -1,0 +1,67 @@
+---
+title: 'Siklus Request'
+description: 'Ikuti perjalanan HTTP request dari bootstrap hingga respons dalam aplikasi Flowra.'
+---
+
+Memahami siklus request membantu Anda menentukan tempat terbaik untuk menyisipkan logika kustom, logging, atau observability. Flowra dibangun di atas Express namun menambahkan pipeline sadar-container untuk setiap request.
+
+## Alur tingkat tinggi
+
+```text
+Client
+  ↓ HTTP
+main/bootstrap.ts
+  ↓ register modules
+HTTP kernel (core/http)
+  ↓ middlewares
+Express router
+  ↓ route match
+Controller
+  ↓ service calls
+Service / Model
+  ↓ database atau IO eksternal
+Response serialized
+  ↑ return JSON
+```
+
+## Bootstrap
+
+1. **Pembuatan container** — `main/bootstrap.ts` membangun application container yang didefinisikan di `core/container/application-container.ts`. Di sini konfigurasi, logger, koneksi Knex, dan service bersama diregistrasikan.
+2. **HTTP server** — Container me-resolve HTTP kernel (`core/http/http-kernel.ts`) yang memasang middleware global (body parser, compression, CORS) dan mengekspos helper `registerRoutes`.
+3. **Registrasi modul** — Setiap modul mengekspor fungsi (mis. `registerTaskRoutes`) yang menerima router Express. Bootstrap mengiterasi modul dan mendaftarkannya.
+
+:::tip Registrasi lazy
+Modul bebas mendaftarkan service tambahan atau job terjadwal ketika route mereka diregistrasikan. Manfaatkan ini untuk menempelkan observer domain tanpa mengubah kode bootstrap global.
+:::
+
+## Penanganan request
+
+1. **Request masuk** — Express menerima HTTP request lalu meneruskan ke middleware yang dikonfigurasi di kernel.
+2. **Pipeline middleware** — Middleware autentikasi, logging, rate limiting, dan validasi berjalan berurutan. Anda dapat menambahkan middleware kustom secara global atau per modul.
+3. **Resolusi route** — Router mencocokkan method dan path terhadap deklarasi route di `routes.ts` milik modul.
+4. **Resolusi controller** — Helper `useController` milik Flowra meminta container menginstansiasi controller beserta dependensinya.
+5. **Eksekusi controller** — Method controller membaca data request (params, query, body), memanggil service, dan membangun respons HTTP.
+6. **Logika service dan model** — Service membungkus aturan domain dan memanggil model atau repository. Model menggunakan Knex untuk mengeksekusi query dan transaksi bila diperlukan.
+7. **Respons** — Controller melakukan serialisasi output service ke JSON serta mengatur status, header, dan cookie.
+
+## Titik ekstensi
+
+| Tahap | Cara memperluas |
+| --- | --- |
+| Bootstrap | Registrasikan provider atau listener tambahan di `main/bootstrap.ts` sebelum server berjalan. |
+| Middleware | Tambah middleware global di `core/http/http-kernel.ts` atau middleware per-route di `routes.ts` modul. |
+| Controller | Dekorasi method controller dengan wrapper validasi atau instrumentasi. |
+| Service | Inject implementasi service alternatif (mis. mock payment gateway) dengan mengubah binding container. |
+| Model | Ganti query Knex dengan stored procedure atau repository sambil menjaga kontrak service tetap stabil. |
+
+:::warning Hindari efek samping di constructor
+Controller dan service sebaiknya tidak melakukan IO di constructor. Container mungkin memakai ulang instance dan mengharapkan proses instansiasi murah. Lakukan pekerjaan di dalam method.
+:::
+
+## Propagasi error
+
+- Error yang dilempar dari controller atau service akan menggelembung ke error handler Express yang diregistrasikan di kernel.
+- Flowra memetakan error dikenal (mis. error validasi) ke HTTP response melalui `core/http/error-handler.ts`.
+- Error yang tidak tertangani akan dilog dengan konteks request sebelum mengembalikan respons 500.
+
+Dengan memahami siklus ini Anda dapat memasukkan concern lintas modul—seperti tracing atau feature flag—pada lapisan yang tepat tanpa membuat modul saling bergantung.

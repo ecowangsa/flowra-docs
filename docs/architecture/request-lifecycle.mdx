@@ -1,0 +1,67 @@
+---
+title: 'Request Lifecycle'
+description: 'Follow an HTTP request from bootstrap to response inside a Flowra application.'
+---
+
+Understanding the request lifecycle helps you reason about where to plug custom logic, logging, or observability. Flowra builds on Express but layers a container-aware pipeline around each request.
+
+## High-level flow
+
+```text
+Client
+  ↓ HTTP
+main/bootstrap.ts
+  ↓ register modules
+HTTP kernel (core/http)
+  ↓ middlewares
+Express router
+  ↓ route match
+Controller
+  ↓ service calls
+Service / Model
+  ↓ database or external IO
+Response serialized
+  ↑ return JSON
+```
+
+## Bootstrapping
+
+1. **Container creation** — `main/bootstrap.ts` constructs the application container defined in `core/container/application-container.ts`. This registers configuration objects, loggers, Knex connections, and shared services.
+2. **HTTP server** — The container resolves the HTTP kernel (`core/http/http-kernel.ts`) which mounts global middleware (body parser, compression, CORS) and exposes a `registerRoutes` helper.
+3. **Module registration** — Each module exports a function (e.g., `registerTaskRoutes`) that receives an Express router. The bootstrap file iterates over modules and registers them.
+
+:::tip Lazy registration
+Modules are free to register additional services or scheduled jobs when their routes are registered. Use this to attach domain-specific observers without touching global bootstrap code.
+:::
+
+## Request handling
+
+1. **Incoming request** — Express receives the HTTP request and hands it to middleware configured in the kernel.
+2. **Middleware pipeline** — Authentication, logging, rate limiting, and validation middleware run in order. You can register custom middleware globally or per-module.
+3. **Route resolution** — The router matches the HTTP method and path against the routes declared in module `routes.ts` files.
+4. **Controller resolution** — Flowra's `useController` helper asks the container to instantiate the controller with dependencies injected.
+5. **Controller execution** — The controller method reads request data (params, query, body), calls the appropriate service, and builds an HTTP response.
+6. **Service and model logic** — Services encapsulate domain rules and call models or repositories. Models use Knex to execute queries within transactions when needed.
+7. **Response** — The controller serializes service output to JSON and sets status codes, headers, and cookies.
+
+## Extension points
+
+| Stage | How to extend |
+| --- | --- |
+| Bootstrap | Register additional providers or listeners in `main/bootstrap.ts` before starting the server. |
+| Middleware | Add global middleware in `core/http/http-kernel.ts` or per-route middleware in module `routes.ts`. |
+| Controller | Decorate controller methods with validation or instrumentation wrappers. |
+| Service | Inject alternative service implementations (e.g., mock payment gateways) by changing container bindings. |
+| Model | Swap Knex queries with stored procedures or repositories while keeping service contracts stable. |
+
+:::warning Avoid side effects in constructors
+Controllers and services should not perform IO in their constructors. The container may reuse instances and expects instantiation to be cheap. Perform work inside methods instead.
+:::
+
+## Error propagation
+
+- Throwing an error inside controllers or services bubbles up to the Express error handler registered in the kernel.
+- Flowra maps known errors (e.g., validation exceptions) to HTTP responses via `core/http/error-handler.ts`.
+- Unhandled errors are logged with request context before returning a 500 response.
+
+Understanding this lifecycle lets you introduce cross-cutting concerns—such as tracing or feature flags—at the correct layer without coupling your modules together.

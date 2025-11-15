@@ -1,0 +1,108 @@
+---
+title: 'Routes & Controller'
+description: 'Definisikan route yang ekspresif, struktur controller, dan ikuti konvensi Flowra untuk API RESTful.'
+---
+
+Route mendeskripsikan kontrak publik API Anda. Di Flowra setiap modul mengekspos `routes.ts` yang menghubungkan HTTP verb ke method controller yang di-resolve melalui service container.
+
+## Mendefinisikan route
+
+```ts title="app/modules/users/routes.ts"
+import {Router} from 'express';
+import {useController} from '../../core/http/controller-resolver';
+import {UsersController} from './controllers/users-controller';
+
+export const registerUserRoutes = (router: Router) => {
+  router.get('/users', useController(UsersController, 'index'));
+  router.post('/users', useController(UsersController, 'store'));
+  router.get('/users/:id', useController(UsersController, 'show'));
+};
+```
+
+- Gunakan path semantik (`/users/:id/orders`).
+- Jaga registrasi route tetap sinkron. Setup async sebaiknya berjalan sebelum server mulai.
+- Komposisi middleware dengan array: `router.post('/users', validate(createUserSchema), useController(...))`.
+
+:::tip Biarkan route tetap tipis
+Hindari logika bisnis di `routes.ts`. Batasi pada wiring middleware dan referensi controller.
+:::
+
+## Pola controller
+
+Controller mengorkestrasi logika level HTTP dan mendelegasikan pekerjaan berat ke service.
+
+```ts title="app/modules/users/controllers/users-controller.ts"
+import {injectable} from 'tsyringe';
+import type {Request, Response} from 'express';
+import {CreateUserService} from '../services/create-user-service';
+import {ListUsersService} from '../services/list-users-service';
+
+@injectable()
+export class UsersController {
+  constructor(
+    private readonly createUser: CreateUserService,
+    private readonly listUsers: ListUsersService,
+  ) {}
+
+  async index(req: Request, res: Response) {
+    const users = await this.listUsers.execute({
+      page: Number(req.query.page ?? 1),
+      perPage: Number(req.query.perPage ?? 20),
+    });
+    return res.json({data: users});
+  }
+
+  async store(req: Request, res: Response) {
+    const user = await this.createUser.execute({
+      email: req.body.email,
+      name: req.body.name,
+    });
+    return res.status(201).json({data: user});
+  }
+}
+```
+
+### Konvensi penamaan
+
+- Gunakan kata benda jamak (`UsersController`, `registerUserRoutes`).
+- Selaraskan nama method dengan semantik HTTP (`index`, `show`, `store`, `update`, `destroy`).
+- Ekspor satu kelas controller per berkas.
+
+## Praktik RESTful terbaik
+
+| Praktik | Deskripsi |
+| --- | --- |
+| Kode status konsisten | Gunakan 200 untuk baca sukses, 201 untuk pembuatan, 204 untuk penghapusan tanpa body. |
+| Parameter paginasi | Terima query `page` dan `perPage` untuk endpoint daftar. |
+| Idempotensi | Pastikan handler `PUT` dan `PATCH` aman diulang. |
+| Validasi | Validasi payload sebelum mencapai controller (lihat [Validasi & Penanganan Error](./validation-and-errors)). |
+| Hypermedia | Sertakan link atau identifier sumber daya saat klien butuh petunjuk navigasi. |
+
+## Melampirkan middleware
+
+```ts
+import {authorize} from '../../core/http/middleware/authorize';
+import {validate} from '../../core/http/middleware/validate';
+import {createUserSchema} from './validators/create-user-schema';
+
+router.post(
+  '/users',
+  authorize('admin'),
+  validate(createUserSchema),
+  useController(UsersController, 'store'),
+);
+```
+
+Middleware menerima triplet Express `req`, `res`, `next`. Jaga middleware tetap stateless dan gunakan container saat membutuhkan dependensi.
+
+## Menguji controller
+
+- Gunakan supertest terhadap aplikasi Express yang di-boot melalui `core/testing/http-test-factory.ts`.
+- Mock service dengan menimpa binding container sebelum boot aplikasi.
+- Asersi kode status, header, dan bentuk body.
+
+:::warning Waspadai controller yang gemuk
+Jika method controller tumbuh terlalu besar, refaktor logika ke service atau handler terpisah. Controller sebaiknya tetap tipis sebagai penerjemah antara HTTP dan kode domain.
+:::
+
+Dengan pola ini route tetap eksplisit, controller mudah dirawat, dan klien menerima respons yang dapat diprediksi.

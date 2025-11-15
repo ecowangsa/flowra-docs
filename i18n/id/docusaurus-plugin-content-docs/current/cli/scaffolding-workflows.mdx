@@ -1,0 +1,75 @@
+---
+title: 'Workflow Scaffolding'
+description: 'Workflow end-to-end yang memanfaatkan CLI Flowra untuk menghadirkan fitur baru dengan cepat.'
+---
+
+CLI Flowra mempercepat workflow tim dengan menghasilkan modul, test, dan migration yang konsisten. Berikut playbook rekomendasi yang dapat Anda adaptasi.
+
+## Workflow 1: Modul domain baru
+
+1. **Generate modul**
+   ```bash
+   npx flowra make:module billing
+   ```
+2. **Buat resource pendukung**
+   ```bash
+   npx flowra make:controller billing invoice
+   npx flowra make:service billing create-invoice
+   npx flowra make:migration create_invoices_table
+   ```
+3. **Implementasi logika bisnis**
+   - Lengkapi kelas controller dan service.
+   - Tambahkan model (`app/modules/billing/models/invoice-model.ts`).
+4. **Hubungkan route dan registrasi modul** di `main/bootstrap.ts`.
+5. **Tulis test** menggunakan stub yang dihasilkan di `__tests__`.
+6. **Jalankan migration dan seed** untuk menyiapkan data contoh.
+
+:::tip Disiplin branch
+Commit scaffolding yang dihasilkan sebelum menambahkan logika. Review menjadi lebih mudah dan diff tetap fokus.
+:::
+
+## Workflow 2: Mengembangkan fitur yang ada
+
+1. **Tambahkan service dan method controller**
+   ```bash
+   npx flowra make:service users reset-password
+   npx flowra make:controller users reset-password
+   ```
+2. **Perbarui route**
+   - Daftarkan endpoint baru di `app/modules/users/routes.ts`.
+3. **Tambahkan validasi**
+   - Buat validator di `validators/reset-password-schema.ts`.
+4. **Sesuaikan binding container**
+   - Pastikan `index.ts` modul mengekspor kelas baru.
+5. **Tulis integration test**
+   - Gunakan stub test dari CLI atau buat yang baru di `__tests__`.
+
+## Workflow 3: Pipeline job background
+
+1. **Generate modul dengan dukungan job**
+   ```bash
+   npx flowra make:module reports
+   ```
+2. **Buat worker antrean**
+   - Tambahkan kelas job di `app/modules/reports/jobs/generate-report-job.ts`.
+3. **Ekspos task CLI**
+   ```bash
+   npx flowra make:command reports:generate
+   ```
+4. **Jadwalkan job**
+   - Registrasikan command di `app/commands/index.ts` dan integrasikan dengan scheduler (mis. cron, BullMQ).
+5. **Uji end-to-end**
+   - Tulis test yang mengantrikan job dan memverifikasi output di storage atau email.
+
+## Tips produktivitas
+
+- **Gunakan dry run** — Banyak generator menerima `--dry-run` untuk melihat pratinjau tanpa menulis berkas.
+- **Template kustom** — Sesuaikan berkas di `resources/templates` untuk menerapkan header keamanan, logging, atau telemetry default.
+- **Padukan dengan linting** — Jalankan `npm run lint` setelah scaffolding untuk menangkap isu format lebih awal.
+- **Script rangkaian umum** — Bungkus perintah CLI dalam npm script (mis. `npm run make:feature users`) agar konvensi tim terdokumentasi.
+
+:::warning Review kode hasil scaffolding
+Scaffolding mempercepat start, tetapi tetap butuh review. Periksa binding dependensi, cakupan test, dan pola akses data sebelum merge.
+:::
+
+Dengan workflow yang distandarkan, tim dapat mengirim fitur lebih cepat sambil menjaga aplikasi Flowra tetap konsisten dan mudah dirawat.

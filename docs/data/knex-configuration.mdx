@@ -1,0 +1,110 @@
+---
+title: 'Knex Configuration'
+description: 'Configure database connections, pools, and multi-tenant setups with Flowra and Knex.'
+---
+
+Flowra centralises database configuration through Knex. A single `config/database.ts` file defines all available connections and exposes them via the service container.
+
+## Configuration file
+
+```ts title="config/database.ts"
+import {knexSnakeCaseMappers} from 'objection';
+
+type ConnectionConfig = {
+  client: 'pg' | 'mysql2' | 'sqlite3';
+  connection: string;
+  pool?: {min?: number; max?: number};
+  migrations?: {tableName?: string};
+};
+
+const shared = knexSnakeCaseMappers();
+
+export default {
+  default: {
+    client: 'pg',
+    connection: process.env.DATABASE_URL!,
+    pool: {min: 2, max: 10},
+    ...shared,
+  } satisfies ConnectionConfig,
+  reporting: {
+    client: 'pg',
+    connection: process.env.READ_REPLICA_URL!,
+    pool: {min: 1, max: 5},
+    ...shared,
+  } satisfies ConnectionConfig,
+};
+```
+
+- Use `knexSnakeCaseMappers` to keep database columns snake_cased while returning camelCase to JavaScript.
+- Add as many connections as you need. Keys become token names in the container (`database.default`, `database.reporting`).
+
+## Environment variables
+
+| Variable | Description |
+| --- | --- |
+| `DATABASE_URL` | Primary database connection string. Supports PostgreSQL, MySQL, SQLite. |
+| `READ_REPLICA_URL` | Optional read replica for analytics or heavy read workloads. |
+| `DATABASE_SSL` | Set to `true` to enable SSL in production (pass through to Knex connection config). |
+| `DATABASE_DEBUG` | Enable verbose query logging for debugging. |
+
+:::warning Secure credentials
+Never commit `.env` files with production credentials. Use secret managers or environment-specific configuration management.
+:::
+
+## Initialising connections
+
+During bootstrap Flowra registers a Knex factory in the container:
+
+```ts title="core/database/index.ts"
+import {container} from 'tsyringe';
+import knex from 'knex';
+import databaseConfig from '../../config/database';
+
+for (const [name, config] of Object.entries(databaseConfig)) {
+  container.registerInstance(`database.${name}`, knex(config));
+}
+```
+
+- The container manages Knex instances as singletons.
+- Inject them into services with `@inject('database.default')` or `@inject('database.reporting')`.
+
+## Multiple databases
+
+When handling multiple databases:
+
+1. Define each connection in `config/database.ts` with unique keys.
+2. Inject the desired connection into the relevant models or repositories.
+3. Use migrations specific to each connection by passing `--knexfile` or `--cwd` arguments.
+
+Example service using two connections:
+
+```ts
+@injectable()
+export class LedgerService {
+  constructor(
+    @inject('database.default') private readonly primary: Knex,
+    @inject('database.reporting') private readonly reporting: Knex,
+  ) {}
+
+  async recordEntry(entry: LedgerEntry) {
+    await this.primary.transaction(async trx => {
+      await trx('ledger').insert(entry);
+      await this.reporting('ledger_replica').insert({...entry, replicated_at: new Date()});
+    });
+  }
+}
+```
+
+## Pooling best practices
+
+- Use smaller pools in serverless environments to avoid exhausting database connections.
+- In long-lived servers, set `min` to at least 2 to keep warm connections.
+- Configure timeouts via `pool.afterCreate` or `acquireConnectionTimeout` when dealing with slow networks.
+
+## Monitoring and debugging
+
+- Enable query logging with `DEBUG=knex:*` to inspect SQL statements.
+- Integrate with APM tools by wrapping Knex queries in instrumentation middleware.
+- Expose health checks that perform lightweight `SELECT 1` queries on each connection.
+
+With a centralised configuration you can scale Flowra to multiple databases while keeping dependency injection clean and explicit.

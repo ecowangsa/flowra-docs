@@ -1,0 +1,127 @@
+---
+title: 'Recipes: Common Tasks'
+description: 'Solve everyday problems in Flowra projects with practical recipes and code snippets.'
+---
+
+These recipes address frequently requested patterns. Adapt them to your modules and services.
+
+## Pagination with metadata
+
+```ts title="app/modules/users/services/list-users-service.ts"
+async execute({page, perPage}: {page: number; perPage: number}) {
+  const [items, [{total}] ] = await Promise.all([
+    this.users.list({page, perPage}),
+    this.users.count(),
+  ]);
+
+  return {
+    data: items,
+    meta: {
+      page,
+      perPage,
+      total,
+      totalPages: Math.ceil(total / perPage),
+    },
+  };
+}
+```
+
+Expose metadata in the controller so clients can build pagination UI.
+
+## File uploads with Express and S3
+
+```ts title="app/modules/uploads/routes.ts"
+import multer from 'multer';
+import {Router} from 'express';
+import {useController} from '../../core/http/controller-resolver';
+import {UploadsController} from './controllers/uploads-controller';
+
+const upload = multer({storage: multer.memoryStorage(), limits: {fileSize: 5 * 1024 * 1024}});
+
+export const registerUploadRoutes = (router: Router) => {
+  router.post('/files', upload.single('file'), useController(UploadsController, 'store'));
+};
+```
+
+```ts title="app/modules/uploads/controllers/uploads-controller.ts"
+import {inject, injectable} from 'tsyringe';
+import type {Request, Response} from 'express';
+import type {S3} from '@aws-sdk/client-s3';
+
+@injectable()
+export class UploadsController {
+  constructor(@inject('aws.s3') private readonly s3: S3) {}
+
+  async store(req: Request, res: Response) {
+    await this.s3.putObject({
+      Bucket: process.env.S3_BUCKET!,
+      Key: `uploads/${Date.now()}-${req.file?.originalname}`,
+      Body: req.file?.buffer,
+      ContentType: req.file?.mimetype,
+    });
+
+    return res.status(201).json({status: 'uploaded'});
+  }
+}
+```
+
+## Background jobs with BullMQ
+
+```ts title="app/modules/reports/jobs/generate-report-job.ts"
+import {injectable} from 'tsyringe';
+import {Queue} from 'bullmq';
+
+@injectable()
+export class GenerateReportJob {
+  constructor(private readonly queue: Queue) {}
+
+  async enqueue(payload: {reportId: string}) {
+    await this.queue.add('generate-report', payload, {attempts: 3, backoff: {type: 'exponential', delay: 1000}});
+  }
+}
+```
+
+Register the queue in the container and process jobs in a worker script using the same service container bindings.
+
+## Graceful shutdown
+
+```ts title="main/server.ts"
+import {container} from 'tsyringe';
+import {createHttpServer} from './bootstrap';
+
+const server = await createHttpServer();
+const httpServer = server.listen(process.env.APP_PORT ?? 3000);
+
+const shutdown = async () => {
+  await server.close();
+  await container.resolve('database.default').destroy();
+  process.exit(0);
+};
+
+['SIGINT', 'SIGTERM'].forEach(signal => process.on(signal, shutdown));
+```
+
+## Feature flag evaluation
+
+```ts title="app/services/feature-flag-service.ts"
+import {injectable} from 'tsyringe';
+
+@injectable()
+export class FeatureFlagService {
+  private readonly flags = new Map<string, boolean>();
+
+  constructor() {
+    this.flags.set('new-dashboard', process.env.FEATURE_NEW_DASHBOARD === 'true');
+  }
+
+  isEnabled(flag: string) {
+    return this.flags.get(flag) ?? false;
+  }
+}
+```
+
+Inject the service into controllers or middleware to guard experimental endpoints.
+
+:::tip Share recipes
+Keep recipes in version control so teams can reference and evolve them. Add new entries as patterns emerge.
+:::

@@ -1,0 +1,128 @@
+---
+title: 'Service Container & Dependency Injection'
+description: 'Learn how Flowra registers and resolves services, and how DI improves testability and modularity.'
+---
+
+The Flowra service container provides inversion of control for your application. Powered by `tsyringe`, it manages the lifecycle of controllers, services, and infrastructure objects.
+
+## Container basics
+
+The container is defined in `core/container/application-container.ts`. During bootstrap it registers:
+
+- Configuration objects (`config/app.ts`, `config/database.ts`).
+- Infrastructure services (HTTP server, logger, queue drivers).
+- Module exports (controllers, services, repositories).
+
+You interact with the container indirectly through decorators and helper functions. The two most common decorators are:
+
+- `@injectable()` — Marks a class as resolvable by the container.
+- `@inject(token)` — Requests a specific binding (useful for interfaces or named resources).
+
+## Registering services
+
+Flowra modules expose an `index.ts` that binds classes to the container. For example:
+
+```ts title="app/modules/payments/index.ts"
+import {container} from 'tsyringe';
+import {PaymentsController} from './controllers/payments-controller';
+import {CreatePaymentService} from './services/create-payment-service';
+
+export const registerPaymentModule = () => {
+  container.registerSingleton(PaymentsController);
+  container.registerSingleton(CreatePaymentService);
+};
+```
+
+This function is executed during bootstrap to ensure the container knows how to instantiate your classes.
+
+## Injecting dependencies into controllers
+
+Controllers depend on services through constructor parameters. Flowra's `useController` helper resolves the controller from the container and calls the requested method.
+
+```ts title="app/modules/payments/controllers/payments-controller.ts"
+import {injectable} from 'tsyringe';
+import type {Request, Response} from 'express';
+import {CreatePaymentService} from '../services/create-payment-service';
+
+@injectable()
+export class PaymentsController {
+  constructor(private readonly createPayment: CreatePaymentService) {}
+
+  async store(req: Request, res: Response) {
+    const payment = await this.createPayment.execute({
+      amount: req.body.amount,
+      currency: req.body.currency,
+    });
+    return res.status(201).json({data: payment});
+  }
+}
+```
+
+No manual `new CreatePaymentService()` is required—the container handles instantiation and injection.
+
+## Injecting infrastructure
+
+Use `@inject` to request named bindings:
+
+```ts title="app/modules/payments/services/create-payment-service.ts"
+import {inject, injectable} from 'tsyringe';
+import type {Knex} from 'knex';
+import type {Logger} from 'pino';
+
+@injectable()
+export class CreatePaymentService {
+  constructor(
+    @inject('database.default') private readonly db: Knex,
+    @inject('logger') private readonly logger: Logger,
+  ) {}
+
+  async execute(input: {amount: number; currency: string}) {
+    this.logger.info({amount: input.amount}, 'Creating payment');
+    const [payment] = await this.db('payments')
+      .insert({...input})
+      .returning(['id', 'amount', 'currency', 'created_at']);
+    return payment;
+  }
+}
+```
+
+Here `database.default` is registered in the container when Knex connections are configured.
+
+## Testing with the container
+
+The container makes it easy to swap real implementations for mocks during tests:
+
+```ts title="app/modules/payments/__tests__/create-payment-service.test.ts"
+import {container} from 'tsyringe';
+import {CreatePaymentService} from '../services/create-payment-service';
+
+describe('CreatePaymentService', () => {
+  beforeEach(() => {
+    container.clearInstances();
+    container.registerInstance('database.default', {
+      insert: () => ({returning: () => Promise.resolve([{id: '1', amount: 100, currency: 'USD'}])}),
+    });
+    container.registerInstance('logger', {info: jest.fn()});
+  });
+
+  it('creates a payment record', async () => {
+    const service = container.resolve(CreatePaymentService);
+    const result = await service.execute({amount: 100, currency: 'USD'});
+    expect(result.amount).toBe(100);
+  });
+});
+```
+
+You can also use dedicated helpers from `core/testing` to bootstrap an isolated application container for integration tests.
+
+:::tip Resetting state
+Use `container.clearInstances()` in test hooks to avoid state leakage between test cases. Flowra registers singletons, so clearing ensures each test starts fresh.
+:::
+
+## Benefits
+
+- **Testability** — Constructor injection makes dependencies explicit, enabling focused unit tests.
+- **Discoverability** — You can inspect container bindings to see what services exist.
+- **Extensibility** — Swap implementations (e.g., switch the cache driver) by changing bindings without touching consumers.
+
+Mastering the service container unlocks Flowra's flexibility—everything from HTTP controllers to background jobs flows through it.

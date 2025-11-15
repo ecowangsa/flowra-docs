@@ -1,0 +1,92 @@
+---
+title: 'Apa itu Flowra?'
+description: 'Memahami Flowra secara ringkas—tujuan, masalah yang diselesaikan, dan fondasi arsitekturnya.'
+---
+
+Flowra adalah framework backend Node.js modular yang membantu tim produk mengembangkan API tanpa kehilangan kendali atas arsitektur mereka. Flowra menambahkan inti beropini di atas Express, memadukan service container berorientasi dependency injection, struktur modul yang konsisten, lapisan data berbasis Knex, dan CLI yang lengkap.
+
+## Mengapa Flowra hadir
+
+Banyak tim API memulai dengan Express murni dan cepat menghadapi tantangan serupa:
+
+- **Arsitektur mudah melenceng.** Tanpa konvensi, setiap modul tersusun berbeda sehingga onboarding lambat dan refactor berisiko.
+- **Wiring dependensi manual.** Rantai `require` dan singleton buatan tangan membocorkan detail implementasi serta menyulitkan pengujian.
+- **Akses data tidak seragam.** Query builder, SQL mentah, dan ORM hidup berdampingan tanpa standar, memperlambat review.
+- **Tidak ada tooling bersama.** Setiap tim membuat ulang skrip scaffolding, workflow seeding, dan generator kode.
+
+Flowra mengatasi rasa sakit tersebut dengan mengodifikasi arsitektur modular yang jelas dan siap tumbuh dari MVP hingga backend enterprise.
+
+:::note Fondasi di atas Express
+Flowra tetap menggunakan semantik request/response Express di bawah kap. Semua kemampuan Express—middleware kustom, streaming respons level rendah, SSR—tetap tersedia, namun dibungkus dengan konvensi yang lebih kuat.
+:::
+
+## Konsep inti
+
+| Konsep | Deskripsi | Lokasi kode |
+| --- | --- | --- |
+| **Modul** | Potongan fitur mandiri yang menggabungkan routes, controller, service, dan berkas pendukung di `app/modules/<domain>` | `app/modules/example` |
+| **Service container** | Kontainer inversion-of-control yang mengurus resolusi dependensi untuk controller, service, dan job | `core/container/application-container.ts` |
+| **Lapisan data Knex** | Konfigurasi database terpusat dengan dukungan multi-koneksi menggunakan Knex | `core/database` + `config/database.ts` |
+| **CLI** | Command runner bertipe aman yang melakukan scaffolding modul, controller, migration, dan lainnya | `bin/flowra.ts` + `app/commands` |
+
+Setiap aplikasi Flowra dimulai dari `main/bootstrap.ts`, tempat container dibangun, modul diregistrasikan, dan server HTTP mulai mendengarkan trafik.
+
+## Endpoint Flowra paling sederhana
+
+Membuat endpoint baru berarti menghubungkan modul, controller, dan service. Berikut struktur ringkas keluaran CLI Flowra setelah menjalankan `npx flowra make:module health`:
+
+```text
+app/
+  modules/
+    health/
+      controllers/
+        health-controller.ts
+      routes.ts
+      services/
+        health-service.ts
+```
+
+Controller dan service yang dihasilkan menjaga pemisahan jelas antara penanganan HTTP dan logika bisnis:
+
+```ts title="app/modules/health/controllers/health-controller.ts"
+import {injectable} from 'tsyringe';
+import type {Request, Response} from 'express';
+import {HealthService} from '../services/health-service';
+
+@injectable()
+export class HealthController {
+  constructor(private readonly service: HealthService) {}
+
+  async index(req: Request, res: Response) {
+    const payload = await this.service.getStatus();
+    return res.json(payload);
+  }
+}
+```
+
+```ts title="app/modules/health/services/health-service.ts"
+import {injectable} from 'tsyringe';
+
+@injectable()
+export class HealthService {
+  async getStatus() {
+    return {status: 'ok', uptime: process.uptime()};
+  }
+}
+```
+
+```ts title="app/modules/health/routes.ts"
+import {Router} from 'express';
+import {useController} from '../../core/http/controller-resolver';
+import {HealthController} from './controllers/health-controller';
+
+export const registerHealthRoutes = (router: Router) => {
+  router.get('/health', useController(HealthController, 'index'));
+};
+```
+
+Setelah route diregistrasikan di `main/bootstrap.ts`, request `GET /health` akan memberikan respons JSON tanpa controller perlu memikirkan cara membuat dependensinya.
+
+:::tip Langkah berikutnya
+Lanjutkan ke [Filosofi Desain](./philosophy) untuk mempelajari prinsip di balik konvensi Flowra, atau lompat ke [Instalasi](../getting-started/installation) untuk menyiapkan proyek pertama Anda.
+:::

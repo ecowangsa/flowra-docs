@@ -1,73 +1,38 @@
 import {themes as prismThemes} from 'prism-react-renderer';
 import type {Config} from '@docusaurus/types';
-import type * as Preset from '@docusaurus/preset-classic';
 
 const config: Config = {
   title: 'Flowra Documentation',
-  tagline: 'A modular, expressive Node.js framework for building scalable web applications - featuring CLI-driven architecture, service container, and seamless module integration.',
+  tagline: 'Official guide to building modular, production-ready Node.js services with Flowra.',
   favicon: 'img/favicon.ico',
-  future: {
-    v4: true,
-  },
-  url: 'https://your-docusaurus-site.example.com',
+  url: 'https://docs.flowra.dev',
   baseUrl: '/',
   organizationName: 'ecowangsa',
   projectName: 'flowra-docs',
-
   onBrokenLinks: 'throw',
+  onBrokenMarkdownLinks: 'warn',
+  trailingSlash: false,
   i18n: {
     defaultLocale: 'en',
     locales: ['en', 'id'],
-    localeConfigs: {
-      en: {
-        htmlLang: 'en-GB',
-      },
-      id: {
-        htmlLang: 'id-ID'
-      }
-    }
   },
-
   presets: [
     [
       'classic',
       {
         docs: {
-          path: 'docs/en',
-          lastVersion: 'current',
-          versions: {
-            current: {
-              label: '1.0.0',
-            },
-          },
-          routeBasePath: 'docs',
           sidebarPath: './sidebars.ts',
+          editUrl: 'https://github.com/ecowangsa/flowra-docs/tree/main/',
+          showLastUpdateAuthor: true,
+          showLastUpdateTime: true,
         },
+        blog: false,
         theme: {
           customCss: './src/css/custom.css',
-        },
-      } satisfies Preset.Options,
-    ],
-  ],
-
-  plugins: [
-    [
-      '@docusaurus/plugin-content-docs',
-      {
-        id: 'id',
-        path: 'docs/id',
-        routeBasePath: 'docs/id',
-        sidebarPath: './sidebars.id.ts',
-        lastVersion: 'current',
-        versions: {
-          current: {
-            label: 'Bahasa Indonesia',
-          },
         },
       },
     ],
   ],
-
   themeConfig: {
     image: 'img/docusaurus-social-card.jpg',
     colorMode: {
@@ -76,27 +41,23 @@ const config: Config = {
     navbar: {
       title: 'Flowra',
       logo: {
-        alt: 'Flowra Logo',
+        alt: 'Flowra logo',
         src: 'img/flowra.png',
       },
       items: [
         {
           type: 'docSidebar',
-          sidebarId: 'tutorialSidebar',
+          sidebarId: 'docsSidebar',
           position: 'left',
-          label: 'Documentation',
+          label: 'Docs',
         },
         {
-          type: 'localeDropdown',
+          href: 'https://github.com/ecowangsa/flowra',
+          label: 'GitHub',
           position: 'right',
         },
         {
-          type: 'docsVersionDropdown',
-          versions: {
-            current: {
-              label: '1.0.0',
-            },
-          },
+          type: 'localeDropdown',
           position: 'right',
         },
       ],
@@ -105,24 +66,28 @@ const config: Config = {
       style: 'dark',
       links: [
         {
-          title: 'Docs',
+          title: 'Guides',
           items: [
             {
-              label: 'Overview (EN)',
-              to: '/docs/overview',
+              label: 'Getting Started',
+              to: '/docs/getting-started/installation',
             },
             {
-              label: 'Ikhtisar (ID)',
-              to: '/docs/id/overview',
+              label: 'Architecture',
+              to: '/docs/architecture/request-lifecycle',
             },
           ],
         },
         {
-          title: 'Social Media',
+          title: 'Community',
           items: [
             {
-              label: 'Instagram',
-              href: 'https://www.instagram.com/flowra.js/',
+              label: 'GitHub Discussions',
+              href: 'https://github.com/ecowangsa/flowra/discussions',
+            },
+            {
+              label: 'Issues',
+              href: 'https://github.com/ecowangsa/flowra/issues',
             },
           ],
         },
@@ -130,19 +95,24 @@ const config: Config = {
           title: 'More',
           items: [
             {
-              label: 'GitHub',
-              href: 'https://github.com/facebook/docusaurus',
+              label: 'Flowra Framework',
+              href: 'https://github.com/ecowangsa/flowra',
+            },
+            {
+              label: 'Twitter',
+              href: 'https://twitter.com/flowrajs',
             },
           ],
         },
       ],
-      copyright: `Copyright © ${new Date().getFullYear()} Flowra, Inc.`,
+      copyright: `Copyright © ${new Date().getFullYear()} Flowra`,
     },
     prism: {
       theme: prismThemes.github,
       darkTheme: prismThemes.dracula,
+      additionalLanguages: ['bash', 'typescript'],
     },
-  } satisfies Preset.ThemeConfig,
+  },
 };
 
 export default config;

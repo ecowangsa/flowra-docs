@@ -1,0 +1,108 @@
+---
+title: 'Routes & Controllers'
+description: 'Define expressive routes, structure controllers, and follow Flowra conventions for RESTful APIs.'
+---
+
+Routes describe the public contract of your API. In Flowra, every module exposes a `routes.ts` file that wires HTTP verbs to controller methods resolved through the service container.
+
+## Defining routes
+
+```ts title="app/modules/users/routes.ts"
+import {Router} from 'express';
+import {useController} from '../../core/http/controller-resolver';
+import {UsersController} from './controllers/users-controller';
+
+export const registerUserRoutes = (router: Router) => {
+  router.get('/users', useController(UsersController, 'index'));
+  router.post('/users', useController(UsersController, 'store'));
+  router.get('/users/:id', useController(UsersController, 'show'));
+};
+```
+
+- Use semantic paths (`/users/:id/orders`).
+- Keep route registration synchronous. Any async setup should run before server start.
+- Compose middleware by passing arrays: `router.post('/users', validate(createUserSchema), useController(...))`.
+
+:::tip Route files stay thin
+Avoid business logic in `routes.ts`. Limit them to wiring middleware and controller references.
+:::
+
+## Controller patterns
+
+Controllers orchestrate HTTP-level logic and delegate heavy lifting to services.
+
+```ts title="app/modules/users/controllers/users-controller.ts"
+import {injectable} from 'tsyringe';
+import type {Request, Response} from 'express';
+import {CreateUserService} from '../services/create-user-service';
+import {ListUsersService} from '../services/list-users-service';
+
+@injectable()
+export class UsersController {
+  constructor(
+    private readonly createUser: CreateUserService,
+    private readonly listUsers: ListUsersService,
+  ) {}
+
+  async index(req: Request, res: Response) {
+    const users = await this.listUsers.execute({
+      page: Number(req.query.page ?? 1),
+      perPage: Number(req.query.perPage ?? 20),
+    });
+    return res.json({data: users});
+  }
+
+  async store(req: Request, res: Response) {
+    const user = await this.createUser.execute({
+      email: req.body.email,
+      name: req.body.name,
+    });
+    return res.status(201).json({data: user});
+  }
+}
+```
+
+### Naming conventions
+
+- Use plural nouns (`UsersController`, `registerUserRoutes`).
+- Match controller method names to HTTP semantics (`index`, `show`, `store`, `update`, `destroy`).
+- Export a single controller class per file.
+
+## RESTful best practices
+
+| Practice | Description |
+| --- | --- |
+| Consistent status codes | Use 200 for successful reads, 201 for creation, 204 for deletions without response body. |
+| Pagination parameters | Accept `page` and `perPage` query params for list endpoints. |
+| Idempotency | Ensure `PUT` and `PATCH` handlers can be safely retried. |
+| Validation | Validate request payloads before reaching controllers (see [Validation & Error Handling](./validation-and-errors)). |
+| Hypermedia | Include links or resource identifiers in responses when clients need navigation hints. |
+
+## Attaching middleware
+
+```ts
+import {authorize} from '../../core/http/middleware/authorize';
+import {validate} from '../../core/http/middleware/validate';
+import {createUserSchema} from './validators/create-user-schema';
+
+router.post(
+  '/users',
+  authorize('admin'),
+  validate(createUserSchema),
+  useController(UsersController, 'store'),
+);
+```
+
+Middleware receives the same Express `req`, `res`, `next` triple. Keep middleware stateless and use the container for dependencies when necessary.
+
+## Testing controllers
+
+- Use supertest against the bootstrapped Express app in `core/testing/http-test-factory.ts`.
+- Mock services by overriding container bindings before booting the app.
+- Assert status codes, headers, and body shape.
+
+:::warning Beware of heavy controllers
+If a controller method grows large, refactor logic into services or request handlers. Controllers should remain thin translators between HTTP and domain code.
+:::
+
+With these patterns your routes remain explicit, controllers stay maintainable, and clients receive predictable responses.

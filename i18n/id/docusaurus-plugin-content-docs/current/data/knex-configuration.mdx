@@ -1,0 +1,110 @@
+---
+title: 'Konfigurasi Knex'
+description: 'Konfigurasikan koneksi database, pool, dan setup multi-tenant dengan Flowra dan Knex.'
+---
+
+Flowra memusatkan konfigurasi database melalui Knex. Satu berkas `config/database.ts` mendefinisikan semua koneksi yang tersedia dan mengeksposnya lewat service container.
+
+## Berkas konfigurasi
+
+```ts title="config/database.ts"
+import {knexSnakeCaseMappers} from 'objection';
+
+type ConnectionConfig = {
+  client: 'pg' | 'mysql2' | 'sqlite3';
+  connection: string;
+  pool?: {min?: number; max?: number};
+  migrations?: {tableName?: string};
+};
+
+const shared = knexSnakeCaseMappers();
+
+export default {
+  default: {
+    client: 'pg',
+    connection: process.env.DATABASE_URL!,
+    pool: {min: 2, max: 10},
+    ...shared,
+  } satisfies ConnectionConfig,
+  reporting: {
+    client: 'pg',
+    connection: process.env.READ_REPLICA_URL!,
+    pool: {min: 1, max: 5},
+    ...shared,
+  } satisfies ConnectionConfig,
+};
+```
+
+- Gunakan `knexSnakeCaseMappers` agar kolom database tetap snake_case namun dikembalikan sebagai camelCase di JavaScript.
+- Tambahkan koneksi sebanyak yang Anda butuhkan. Key akan menjadi nama token di container (`database.default`, `database.reporting`).
+
+## Environment variable
+
+| Variabel | Deskripsi |
+| --- | --- |
+| `DATABASE_URL` | Connection string database utama. Mendukung PostgreSQL, MySQL, SQLite. |
+| `READ_REPLICA_URL` | Replica baca opsional untuk analitik atau workload baca berat. |
+| `DATABASE_SSL` | Set ke `true` untuk mengaktifkan SSL di produksi (diteruskan ke konfigurasi Knex). |
+| `DATABASE_DEBUG` | Aktifkan logging query verbose untuk debugging. |
+
+:::warning Amankan kredensial
+Jangan pernah commit berkas `.env` dengan kredensial produksi. Gunakan secret manager atau manajemen konfigurasi per environment.
+:::
+
+## Inisialisasi koneksi
+
+Saat bootstrap Flowra meregistrasikan factory Knex di container:
+
+```ts title="core/database/index.ts"
+import {container} from 'tsyringe';
+import knex from 'knex';
+import databaseConfig from '../../config/database';
+
+for (const [name, config] of Object.entries(databaseConfig)) {
+  container.registerInstance(`database.${name}`, knex(config));
+}
+```
+
+- Container mengelola instance Knex sebagai singleton.
+- Inject ke service menggunakan `@inject('database.default')` atau `@inject('database.reporting')`.
+
+## Banyak database
+
+Saat menangani lebih dari satu database:
+
+1. Definisikan setiap koneksi di `config/database.ts` dengan key unik.
+2. Inject koneksi yang sesuai ke model atau repository terkait.
+3. Gunakan migration spesifik per koneksi dengan flag `--knexfile` atau `--cwd`.
+
+Contoh service yang memakai dua koneksi:
+
+```ts
+@injectable()
+export class LedgerService {
+  constructor(
+    @inject('database.default') private readonly primary: Knex,
+    @inject('database.reporting') private readonly reporting: Knex,
+  ) {}
+
+  async recordEntry(entry: LedgerEntry) {
+    await this.primary.transaction(async trx => {
+      await trx('ledger').insert(entry);
+      await this.reporting('ledger_replica').insert({...entry, replicated_at: new Date()});
+    });
+  }
+}
+```
+
+## Praktik terbaik pooling
+
+- Gunakan pool kecil di lingkungan serverless agar tidak menghabiskan koneksi database.
+- Pada server long-lived, set `min` minimal 2 untuk menjaga koneksi hangat.
+- Atur timeout melalui `pool.afterCreate` atau `acquireConnectionTimeout` ketika jaringan lambat.
+
+## Monitoring dan debugging
+
+- Aktifkan logging query dengan `DEBUG=knex:*` untuk memeriksa SQL yang dijalankan.
+- Integrasikan dengan APM dengan membungkus query Knex menggunakan middleware instrumentasi.
+- Ekspos health check yang menjalankan `SELECT 1` ringan pada setiap koneksi.
+
+Dengan konfigurasi terpusat Anda dapat menskalakan Flowra ke banyak database sambil menjaga dependency injection tetap bersih dan eksplisit.

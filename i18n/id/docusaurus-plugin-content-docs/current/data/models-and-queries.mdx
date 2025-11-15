@@ -1,0 +1,112 @@
+---
+title: 'Model & Query'
+description: 'Bangun lapisan akses data reusable di atas Knex, termasuk operasi CRUD, join, dan transaksi.'
+---
+
+Flowra menggunakan Knex murni untuk akses data, mendorong Anda membuat model atau repository ringan yang selaras dengan domain. Model mengenkapsulasi logika query sehingga controller dan service bebas dari detail SQL.
+
+## Membuat model
+
+```ts title="app/modules/users/models/user-model.ts"
+import {inject, injectable} from 'tsyringe';
+import type {Knex} from 'knex';
+
+@injectable()
+export class UserModel {
+  constructor(@inject('database.default') private readonly db: Knex) {}
+
+  query() {
+    return this.db<UserRecord>('users');
+  }
+
+  async create(data: CreateUserInput) {
+    const [user] = await this.query()
+      .insert({...data})
+      .returning(['id', 'email', 'name', 'created_at']);
+    return user;
+  }
+
+  async findById(id: string) {
+    return this.query().where({id}).first();
+  }
+
+  async list({page, perPage}: {page: number; perPage: number}) {
+    return this.query()
+      .select('id', 'email', 'name', 'created_at')
+      .orderBy('created_at', 'desc')
+      .limit(perPage)
+      .offset((page - 1) * perPage);
+  }
+}
+
+export type UserRecord = {
+  id: string;
+  email: string;
+  name: string;
+  created_at: Date;
+};
+
+export type CreateUserInput = Pick<UserRecord, 'email' | 'name'>;
+```
+
+## Join dan agregasi
+
+```ts title="app/modules/orders/models/order-model.ts"
+async listWithTotals(userId: string) {
+  return this.db('orders as o')
+    .leftJoin('order_items as i', 'o.id', 'i.order_id')
+    .where('o.user_id', userId)
+    .groupBy('o.id')
+    .select('o.id', 'o.status')
+    .sum<{total: number}>({total: 'i.subtotal'});
+}
+```
+
+- Gunakan alias tabel saat join untuk menjaga query tetap mudah dibaca.
+- Manfaatkan `.sum<{total: number}>` atau `.count<{count: number}>` bertipe untuk memberi tahu TypeScript bentuk hasil.
+
+## Transaksi
+
+Bungkus query terkait dalam transaksi agar update bersifat atomik:
+
+```ts
+await this.db.transaction(async trx => {
+  const [order] = await trx('orders').insert({...input}).returning('*');
+  await trx('order_items').insert(input.items.map(item => ({...item, order_id: order.id})));
+});
+```
+
+- Selalu kembalikan promise transaksi agar Knex mengatur commit/rollback.
+- Teruskan objek transaksi (`trx`) ke repository lain jika perlu ikut serta.
+
+## Menjauhkan SQL dari controller
+
+Service memanggil model alih-alih menulis SQL langsung:
+
+```ts title="app/modules/users/services/list-users-service.ts"
+import {injectable} from 'tsyringe';
+import {UserModel} from '../models/user-model';
+
+@injectable()
+export class ListUsersService {
+  constructor(private readonly users: UserModel) {}
+
+  async execute(input: {page: number; perPage: number}) {
+    return this.users.list(input);
+  }
+}
+```
+
+Controller cukup memanggil `listUsersService.execute`, menjaga logika HTTP terpisah dari persistensi.
+
+## Pola untuk query kompleks
+
+- **Scope reusable** — Buat helper seperti `withActive()` yang mengembalikan query builder dengan filter tertentu.
+- **Repository per agregat** — Untuk domain besar, buat repository yang menggabungkan banyak model guna membangun read model.
+- **View dan materialized view** — Kelola view SQL melalui migration; model dapat meng-query seperti tabel biasa.
+
+:::tip Gunakan tipe TypeScript
+Definisikan alias `type` untuk hasil model agar tidak perlu mengulang daftar field di service dan test.
+:::
+
+Dengan mengenkapsulasi SQL dalam model Anda mendapatkan lapisan akses data yang reusable, refactor lebih aman, dan logika bisnis yang lebih mudah dibaca.

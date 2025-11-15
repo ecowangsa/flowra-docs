@@ -1,0 +1,112 @@
+---
+title: 'Migrations & Seeds'
+description: 'Kelola perubahan skema dan seed data dalam proyek Flowra menggunakan migration Knex.'
+---
+
+Perubahan skema dan seed data menjaga lingkungan tetap reproducible. Flowra memanfaatkan sistem migration milik Knex dan mengintegrasikannya dengan CLI serta service container.
+
+## Struktur direktori
+
+```
+resources/
+└─ database/
+   ├─ migrations/
+   └─ seeds/
+```
+
+- Simpan migration yang dihasilkan di `resources/database/migrations`.
+- Letakkan skrip seed pada `resources/database/seeds` untuk fixture atau data demo.
+
+## Membuat migration
+
+```bash
+npx flowra make:migration create_users_table
+```
+
+Perintah ini membuat berkas migration dengan prefix timestamp. Contohnya:
+
+```ts title="resources/database/migrations/202405010001_create_users_table.ts"
+import type {Knex} from 'knex';
+
+export async function up(knex: Knex) {
+  await knex.schema.createTable('users', table => {
+    table.uuid('id').primary();
+    table.string('email').notNullable().unique();
+    table.string('name').notNullable();
+    table.timestamps(true, true);
+  });
+}
+
+export async function down(knex: Knex) {
+  await knex.schema.dropTable('users');
+}
+```
+
+:::note Prefix timestamp
+Knex mengeksekusi migration secara leksikografis. Pertahankan prefix timestamp agar urutan eksekusi terjaga.
+:::
+
+## Menjalankan migration
+
+```bash
+npm run knex migrate:latest
+```
+
+- Membaca `config/database.ts` untuk informasi koneksi.
+- Menerapkan migration yang belum berjalan ke koneksi default.
+- Gunakan `npm run knex migrate:rollback` untuk membatalkan batch terakhir.
+
+Untuk koneksi tertentu:
+
+```bash
+npm run knex -- migrate:latest --knexfile config/reporting.knex.ts
+```
+
+Buat konfigurasi Knex tambahan jika beberapa koneksi memerlukan folder migration berbeda.
+
+## Seed data
+
+Generate berkas seed:
+
+```bash
+npx flowra make:seed demo_users
+```
+
+Contoh seed:
+
+```ts title="resources/database/seeds/01_demo_users.ts"
+import type {Knex} from 'knex';
+
+export async function seed(knex: Knex) {
+  await knex('users').del();
+  await knex('users').insert([
+    {id: '01HX1', email: 'demo@flowra.dev', name: 'Demo User'},
+    {id: '01HX2', email: 'ops@flowra.dev', name: 'Ops User'},
+  ]);
+}
+```
+
+Jalankan seed dengan:
+
+```bash
+npm run knex seed:run
+```
+
+:::tip Pisahkan fixture test
+Gunakan seed khusus untuk pengujian otomatis dan jalankan pada skrip setup test. Pisahkan dari seed data produksi.
+:::
+
+## Workflow yang disarankan
+
+1. **Buat migration** untuk setiap perubahan skema.
+2. **Tulis seed** untuk data dasar (admin user, feature flag).
+3. **Review migration** di pull request untuk menangkap perubahan destruktif.
+4. **Otomatisasikan eksekusi** di pipeline CI/CD sebelum menjalankan test dan deployment.
+
+## Troubleshooting
+
+- Jika migration gagal dengan error `lock`, pastikan hanya satu proses yang menjalankannya.
+- Gunakan `knex migrate:status` untuk melihat daftar migration yang telah diterapkan.
+- Untuk perubahan destruktif, buat migration baru alih-alih mengubah berkas lama.
+
+Dengan standardisasi migration dan seed, setiap environment tetap sinkron—dari development lokal hingga peluncuran produksi.

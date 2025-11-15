@@ -1,0 +1,92 @@
+---
+title: 'What is Flowra?'
+description: 'Understand Flowra at a glance—its goals, problem space, and the building blocks that make the framework unique.'
+---
+
+Flowra is a modular Node.js backend framework focused on helping product teams evolve APIs without losing control over their architecture. It layers an opinionated core on top of Express, pairing a dependency-injected service container with a predictable module layout, a Knex-powered data layer, and a batteries-included CLI.
+
+## Why Flowra exists
+
+Modern API teams often start with plain Express and quickly run into the same challenges:
+
+- **Architecture drift.** Without conventions, every module ends up structured differently, making onboarding hard and refactoring risky.
+- **Ad-hoc dependency wiring.** Manual `require` chains and singleton exports leak implementation details and complicate testing.
+- **Inconsistent data access.** Query builders, raw SQL, and ORMs coexist without standards, slowing down reviews.
+- **No shared tooling.** Every team reinvents scaffolding scripts, seeding workflows, and lint-friendly code generation.
+
+Flowra solves these pains by codifying a clear, modular architecture that scales from MVPs to enterprise backends.
+
+:::note Foundation on Express
+Flowra keeps the familiar Express request/response semantics under the hood. Anything you can do in Express—custom middleware, low-level response streaming, SSR—is still possible, but wrapped in stronger conventions.
+:::
+
+## Core concepts
+
+| Concept | Description | Where to look |
+| --- | --- | --- |
+| **Modules** | Independent feature slices bundling routes, controllers, services, and supporting files under `app/modules/<domain>` | `app/modules/example` |
+| **Service container** | An inversion-of-control container that resolves dependencies for controllers, services, and jobs | `core/container/application-container.ts` |
+| **Knex data layer** | Centralised database configuration with multi-connection support using Knex | `core/database` + `config/database.ts` |
+| **CLI** | Type-safe command runner that scaffolds modules, controllers, migrations, and more | `bin/flowra.ts` + `app/commands` |
+
+Each Flowra application begins at `main/bootstrap.ts`, where the container is built, modules are registered, and the HTTP server starts listening.
+
+## A minimal Flowra endpoint
+
+Creating a new endpoint is a matter of wiring a module, controller, and service. Below is the abbreviated output of the Flowra CLI after running `npx flowra make:module health`:
+
+```text
+app/
+  modules/
+    health/
+      controllers/
+        health-controller.ts
+      routes.ts
+      services/
+        health-service.ts
+```
+
+The generated controller and service give you clean separation between HTTP handling and business logic:
+
+```ts title="app/modules/health/controllers/health-controller.ts"
+import {injectable} from 'tsyringe';
+import type {Request, Response} from 'express';
+import {HealthService} from '../services/health-service';
+
+@injectable()
+export class HealthController {
+  constructor(private readonly service: HealthService) {}
+
+  async index(req: Request, res: Response) {
+    const payload = await this.service.getStatus();
+    return res.json(payload);
+  }
+}
+```
+
+```ts title="app/modules/health/services/health-service.ts"
+import {injectable} from 'tsyringe';
+
+@injectable()
+export class HealthService {
+  async getStatus() {
+    return {status: 'ok', uptime: process.uptime()};
+  }
+}
+```
+
+```ts title="app/modules/health/routes.ts"
+import {Router} from 'express';
+import {useController} from '../../core/http/controller-resolver';
+import {HealthController} from './controllers/health-controller';
+
+export const registerHealthRoutes = (router: Router) => {
+  router.get('/health', useController(HealthController, 'index'));
+};
+```
+
+With routes registered in `main/bootstrap.ts`, hitting `GET /health` yields a JSON response without the controller worrying about how its dependencies are created.
+
+:::tip Next steps
+Continue with the [Design Philosophy](./philosophy) to learn the guiding principles behind Flowra's conventions, or jump to [Installation](../getting-started/installation) to bootstrap your first project.
+:::

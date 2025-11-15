@@ -1,0 +1,127 @@
+---
+title: 'Validasi & Penanganan Error'
+description: 'Implementasikan validasi request yang konsisten dan ubah pengecualian menjadi respons HTTP yang terprediksi.'
+---
+
+Flowra mendorong validasi input di batas modul dan memetakan error ke respons terstruktur. Pendekatan ini menjaga controller tetap bersih dan memberi umpan balik yang dapat diandalkan bagi klien.
+
+## Strategi validasi request
+
+Flowra tidak memaksa library validasi tertentu, namun scaffold menunjukkan pola menggunakan Zod dan validator kustom.
+
+### Validasi berbasis skema
+
+Buat skema dan middleware untuk memvalidasi payload masuk:
+
+```ts title="app/modules/users/validators/create-user-schema.ts"
+import {z} from 'zod';
+
+export const createUserSchema = z.object({
+  email: z.string().email(),
+  name: z.string().min(2),
+});
+```
+
+```ts title="core/http/middleware/validate.ts"
+import type {AnyZodObject} from 'zod';
+import type {Request, Response, NextFunction} from 'express';
+import {ValidationException} from '../validation-exception';
+
+export const validate = (schema: AnyZodObject) =>
+  (req: Request, _res: Response, next: NextFunction) => {
+    const result = schema.safeParse(req.body);
+    if (!result.success) {
+      throw new ValidationException(result.error.flatten());
+    }
+    req.body = result.data;
+    next();
+  };
+```
+
+Gunakan middleware tersebut di `routes.ts`:
+
+```ts
+router.post('/users', validate(createUserSchema), useController(UsersController, 'store'));
+```
+
+:::tip Validasi di tepi
+Lakukan validasi sebelum controller berjalan. Service seharusnya menerima input yang sudah bersih agar logika domain bebas dari concern HTTP.
+:::
+
+### Validator kustom
+
+Untuk skenario kompleks (mis. bergantung pada state database) buat service atau middleware validator yang memanfaatkan container untuk mengakses repository.
+
+## Pipeline penanganan error
+
+Error yang dilempar selama pemrosesan request akan mengalir ke `core/http/error-handler.ts`:
+
+```ts title="core/http/error-handler.ts"
+import type {Request, Response, NextFunction} from 'express';
+import {ValidationException} from './validation-exception';
+
+export const errorHandler = (err: unknown, _req: Request, res: Response, _next: NextFunction) => {
+  if (err instanceof ValidationException) {
+    return res.status(422).json({
+      error: 'ValidationError',
+      details: err.details,
+    });
+  }
+
+  if (err instanceof DomainException) {
+    return res.status(err.statusCode).json({
+      error: err.code,
+      message: err.message,
+    });
+  }
+
+  console.error(err);
+  return res.status(500).json({error: 'InternalServerError'});
+};
+```
+
+- Registrasikan handler setelah route di `http-kernel.ts`.
+- Perluas handler untuk mendukung exception domain spesifik (mis. `NotFoundException`).
+
+## Merancang kelas exception
+
+Buat kelas exception ringan untuk merepresentasikan error domain:
+
+```ts title="core/http/exceptions/not-found-exception.ts"
+export class NotFoundException extends Error {
+  code = 'NotFound';
+  statusCode = 404;
+
+  constructor(message = 'Resource not found') {
+    super(message);
+  }
+}
+```
+
+Lempar dari service:
+
+```ts
+default async execute(id: string) {
+  const user = await this.model.find(id);
+  if (!user) {
+    throw new NotFoundException('User not found');
+  }
+  return user;
+}
+```
+
+## Pedoman respons error
+
+| Situasi | Respons yang disarankan |
+| --- | --- |
+| Validasi gagal | Status 422 dengan `error`, `message`, dan `details` berisi daftar error per field. |
+| Gagal autentikasi | Status 401 dengan header `WWW-Authenticate`. |
+| Gagal otorisasi | Status 403 dengan pesan jelas mengenai izin yang hilang. |
+| Tidak ditemukan | Status 404 dengan identifier resource jika ada. |
+| Error tak terduga | Status 500 dengan correlation ID di header untuk tracing. |
+
+:::warning Jangan pernah menampilkan stack trace di produksi
+Log detail error di sisi server dan kirim hanya pesan aman ke klien. Sertakan correlation ID atau log ID untuk debugging.
+:::
+
+Dengan standardisasi validasi dan penanganan error, tim dapat mengirim API yang mudah diintegrasikan dan lebih gampang di-debug.

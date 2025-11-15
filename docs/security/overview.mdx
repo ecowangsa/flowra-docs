@@ -1,0 +1,58 @@
+---
+title: 'Security Overview'
+description: 'Protect Flowra applications with authentication patterns, secure configuration, and operational best practices.'
+---
+
+Security is a shared responsibility between the framework and your team. Flowra provides hooks to implement authentication, authorization, and secure configuration.
+
+## Authentication patterns
+
+- **JWT or session tokens** — Implement middleware in `core/http/middleware/authenticate.ts` that verifies tokens, resolves the user via services, and attaches context to `req.user`.
+- **API keys** — Use header-based middleware that validates keys stored in the database or environment variables.
+- **Third-party identity providers** — Integrate with OAuth/OIDC providers by placing callback handlers in a dedicated module and exchanging tokens through services.
+
+:::note Store secrets safely
+Never store secrets directly in code. Load them from environment variables or secret managers and inject them through the container.
+:::
+
+## Authorization
+
+- Define role-based access using middleware: `authorize('admin')` checks the user context and short-circuits unauthorized requests.
+- For fine-grained policies, encapsulate rules in policy classes under `app/modules/<domain>/policies`.
+- Log authorization failures with request metadata for auditing.
+
+## Secure configuration
+
+- Use `.env` files for local development only. For production, inject environment variables via your orchestrator.
+- Validate critical environment variables at bootstrap (`config/app.ts`) and fail fast when required variables are missing.
+- Rotate keys and credentials periodically; store rotation metadata in configuration files or secrets managers.
+
+## HTTP hardening
+
+- Add security headers (HSTS, CSP) using middleware like `helmet` in `http-kernel.ts`.
+- Enforce HTTPS at the load balancer or reverse proxy.
+- Rate limit sensitive endpoints (login, password reset) with middleware or upstream services.
+
+## Logging and auditing
+
+- Use structured logging (pino) to capture request identifiers, user IDs, and important events.
+- Redact sensitive fields before logging by configuring serializers in the logger.
+- Emit audit events when privileged actions occur (e.g., role changes, configuration updates).
+
+## Secrets and environment safety
+
+- Set file permissions on `.env` files and restrict shell history.
+- In CI/CD, use dedicated secrets for each environment (dev/staging/prod).
+- Monitor for secret leaks using automated scanners on pull requests.
+
+## Incident response readiness
+
+- Centralise error monitoring (Sentry, New Relic) and alert on security-relevant signals.
+- Keep dependency versions up to date; run `npm audit` or `pnpm audit` regularly.
+- Document runbooks in the repository for handling credential leaks or account takeovers.
+
+:::warning Principle of least privilege
+Grant services and database users only the permissions they require. Limit network access between modules and external services.
+:::
+
+By layering authentication, authorization, configuration hygiene, and monitoring, Flowra apps remain resilient against common threats.

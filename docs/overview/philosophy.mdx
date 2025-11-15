@@ -1,0 +1,50 @@
+---
+title: 'Design Philosophy'
+description: 'The principles that shape Flowra: structure, testability, separation of concerns, and pragmatic flexibility.'
+---
+
+Flowra is unapologetically opinionated. The framework provides a compass for building maintainable backends while leaving room for teams to tailor implementation details. Understanding these guiding principles helps explain why the project makes certain trade-offs.
+
+## Values that drive Flowra
+
+### Explicit structure
+Flowra favours discoverability over magic. Features live inside modules that co-locate HTTP contracts, business logic, and data access. A newcomer can open `app/modules` and trace how a request flows without global searches.
+
+### Testability first
+All runtime components resolve through the service container, which encourages dependency injection. Controllers accept collaborators through their constructors, enabling focused unit tests and straightforward mocking.
+
+### Separation of concerns
+Routes handle routing, controllers orchestrate HTTP behaviour, services encapsulate domain logic, and models own persistence. This separation ensures each layer is easy to reason about and refactor in isolation.
+
+### Multi-database support
+Teams often manage multiple data sources. Flowra centralises database configuration with Knex, supports named connections, and lets modules declare which connection they need—without hard-coding connection logic.
+
+## Opinionated yet flexible
+
+Flowra provides:
+
+- **Curated defaults.** TypeScript, ESLint, Prettier, and structured logging are wired out of the box.
+- **Convention-driven scaffolding.** The CLI generates files that already follow the best practices promoted by the framework.
+- **Extension hooks.** You can override configuration, register custom middleware, or swap implementations inside the container without forking core packages.
+
+If you need to diverge from the defaults, you can. Modules can replace generated patterns, the container can register alternative services, and nothing stops you from integrating another ORM or message bus when the project requires it.
+
+:::tip Flexible by design
+Flowra builds on Express and Knex rather than hiding them. When the conventions are not enough, you can drop down to the underlying libraries.
+:::
+
+## Flowra vs DIY Express
+
+| Dimension | Flowra | DIY Express |
+| --- | --- | --- |
+| Structure | Prescribed module layout, CLI scaffolding, and shared config | Depends on team discipline; structure varies per feature |
+| Dependency management | Container resolves services and shared resources automatically | Manual imports and singleton patterns | 
+| Data access | Central Knex configuration with connection pooling and migrations | Each engineer chooses their own pattern |
+| Testing | Container-aware helpers for integration tests and dependency mocks | Custom bootstrapping per project |
+| Learning curve | Opinionated conventions reduce decision fatigue | Requires architecture decisions from day one |
+
+:::warning When DIY makes sense
+If your project is a single webhook handler or a quick proof of concept, the ceremony of Flowra may be overkill. Plain Express or serverless functions can ship faster when you do not need the architecture to last.
+:::
+
+Flowra aims to be a long-term home for APIs, not just a starter template. By aligning with its philosophy you gain consistency, shared vocabulary, and the confidence that your codebase can scale with your team.

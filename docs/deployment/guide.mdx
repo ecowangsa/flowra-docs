@@ -1,0 +1,91 @@
+---
+title: 'Deployment Guide'
+description: 'Prepare Flowra applications for production and deploy them to Docker, VPS, or PaaS environments.'
+---
+
+Reliable deployments keep Flowra services available and predictable. This guide covers build steps, environment management, and deployment options.
+
+## Build for production
+
+```bash
+npm run build
+npm run start
+```
+
+- `npm run build` compiles TypeScript to JavaScript (output typically in `dist/`).
+- `npm run start` runs the compiled server using Node.js with production configuration.
+
+:::note Environment detection
+Flowra reads `APP_ENV` to adjust logging levels, database settings, and caching. Set it to `production` in live environments.
+:::
+
+## Environment management
+
+- **.env files** — Use `.env.local` for development. For production, inject variables via your infrastructure (Docker secrets, Kubernetes ConfigMaps, PaaS dashboards).
+- **Key variables** — `APP_PORT`, `APP_ENV`, `DATABASE_URL`, `READ_REPLICA_URL`, `LOG_LEVEL`, `JWT_SECRET`.
+- **Config overrides** — Add environment-specific overrides in `config/app.ts` or create `config/<env>.ts` modules and load them conditionally.
+
+## Database migrations
+
+Before starting the server run migrations:
+
+```bash
+npm run knex migrate:latest
+```
+
+Automate this step in CI/CD pipelines or entrypoint scripts. For zero-downtime deploys, run migrations in a maintenance window or use transactional DDL.
+
+## Deployment options
+
+### Docker
+
+`Dockerfile` example:
+
+```Dockerfile
+FROM node:18-alpine AS build
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci
+COPY . .
+RUN npm run build
+
+FROM node:18-alpine
+WORKDIR /app
+ENV NODE_ENV=production
+COPY --from=build /app/package*.json ./
+RUN npm ci --omit=dev
+COPY --from=build /app/dist ./dist
+CMD ["node", "dist/main/server.js"]
+```
+
+- Use multi-stage builds to keep runtime images small.
+- Inject environment variables via Docker secrets or orchestrator configs.
+
+### VPS or bare metal
+
+1. Install Node.js LTS and process manager (PM2, systemd).
+2. Clone the repository, run `npm ci`, `npm run build`.
+3. Configure `.env` and start the server: `pm2 start dist/main/server.js --name flowra`.
+4. Use nginx or Caddy as a reverse proxy with SSL termination.
+
+### PaaS (Heroku, Render, Railway)
+
+- Configure build command `npm run build` and start command `npm run start`.
+- Set environment variables in the platform dashboard.
+- Use managed Postgres or MySQL offerings and set `DATABASE_URL` accordingly.
+
+## Production checklist
+
+- [ ] Environment variables set with secure values.
+- [ ] Database migrations executed successfully.
+- [ ] Health check endpoint monitored (`/health`).
+- [ ] Logging sinks configured (stdout or external aggregator).
+- [ ] Alerting configured for errors and performance metrics.
+- [ ] Rate limiting enabled on sensitive endpoints.
+- [ ] SSL certificates valid and auto-renewed.
+
+:::warning Cold start considerations
+If running on serverless platforms, ensure database connections are pooled appropriately and consider connection warmers.
+:::
+
+With consistent build steps and automation, Flowra deployments become repeatable across staging and production environments.

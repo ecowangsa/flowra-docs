@@ -1,0 +1,42 @@
+---
+title: 'FAQ'
+description: 'Frequently asked questions about adopting and running Flowra.'
+---
+
+## Can I use Flowra without TypeScript?
+
+Flowra is built with TypeScript in mind. While you can compile JavaScript sources, you lose decorator metadata and type safety. We recommend keeping TypeScript for container integration and IDE support.
+
+## How do I add a new module?
+
+Use the CLI:
+
+```bash
+npx flowra make:module <name>
+```
+
+Then register the module's routes in `main/bootstrap.ts`.
+
+## Does Flowra support multiple databases?
+
+Yes. Define additional connections in `config/database.ts` and inject them using `@inject('database.<name>')`. Manage migrations per connection using separate Knex config files.
+
+## Can I run Flowra in serverless environments?
+
+Flowra can run on serverless platforms if you manage database connections carefully. Use connection pooling proxies (e.g., PgBouncer) and keep the container bootstrap light to reduce cold start impact.
+
+## How do I handle background jobs?
+
+Use the CLI to scaffold job modules and integrate with a queue library such as BullMQ. Register queue instances in the container so jobs and HTTP handlers share configuration.
+
+## Is there a built-in admin panel?
+
+Flowra focuses on backend architecture and does not ship an admin UI. You can integrate popular admin dashboards or build custom frontends consuming Flowra's APIs.
+
+## How do I upgrade Flowra?
+
+Check the release notes, update dependencies via `npm install flowra@latest`, and run generated migration scripts if provided. Review breaking changes in the changelog before deploying.
+
+## Where can I ask for help?
+
+Open a discussion or issue on [GitHub](https://github.com/ecowangsa/flowra) and join community channels announced in the repository README.

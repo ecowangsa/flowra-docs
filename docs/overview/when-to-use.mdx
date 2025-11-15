@@ -1,0 +1,42 @@
+---
+title: 'When Should You Use Flowra?'
+description: 'Guidance for deciding when Flowra is the right fit for your product, team, and architecture.'
+---
+
+Flowra shines when you need a dependable backbone for APIs that will evolve with your organisation. Use the checklist below to determine whether the framework matches your goals.
+
+## Ideal scenarios
+
+- **Business applications.** Multi-team products with dashboards, workflows, and third-party integrations benefit from Flowra's clear module boundaries and CLI scaffolding.
+- **Marketplaces and multi-tenant systems.** The service container makes it easy to resolve tenant-aware services, while Knex supports per-tenant database connections.
+- **Internal platforms.** If different squads contribute modules to the same backend, Flowra's conventions keep contributions consistent.
+- **APIs requiring strict governance.** Environments that need audited dependencies, predictable bootstrapping, and reproducible builds map neatly to Flowra's dependency injection and configuration layers.
+
+## When Flowra might be overkill
+
+Flowra adds structure and tooling that may be unnecessary for:
+
+- Short-lived prototypes or hackathon projects.
+- Single-function automations or cron jobs.
+- Edge runtimes where the dependency container overhead outweighs benefits.
+
+In these cases, lean on Express, Fastify, or serverless functions for minimal setup.
+
+:::note Lightweight alternatives
+Flowra modules can expose lightweight handlers when you need to dip below the framework. You can still share configuration and services while writing a bare Express router for high-throughput hot paths.
+:::
+
+## Migration tips for existing Express apps
+
+Migrating incrementally keeps risk low:
+
+1. **Adopt Flowra's layout.** Move one feature into `app/modules/<feature>` with a controller/service split. Keep the rest of the app untouched.
+2. **Introduce the container.** Wrap your existing server bootstrapping with the Flowra container and register the migrated module. Gradually resolve shared utilities (e.g., loggers, caches) through the container.
+3. **Standardise data access.** Configure Knex via `config/database.ts` and convert models or repositories to use the shared connection.
+4. **Leverage the CLI.** Generate controllers, services, and migrations for new features to prevent regressions into ad-hoc patterns.
+
+:::tip Side-by-side migration
+Because Flowra is built on Express, you can mount existing routers inside Flowra modules. This allows teams to migrate route groups one at a time without breaking consumers.
+:::
+
+If you see your roadmap expanding in scope or team size, adopting Flowra early gives you strong foundations before complexity hits.

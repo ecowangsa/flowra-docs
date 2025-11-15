@@ -1,0 +1,220 @@
+---
+title: 'API Pertama Anda'
+description: 'Buat endpoint health check dan fitur CRUD sederhana menggunakan modul, controller, dan service Flowra.'
+---
+
+Dalam tutorial ini Anda akan membangun dua endpoint: health check dan task manager sederhana dengan operasi create/list. Kita akan memanfaatkan CLI Flowra, controller, service, dan model untuk menyatukan semuanya.
+
+## 1. Scaffold modul
+
+Generate modul `tasks`:
+
+```bash
+npx flowra make:module tasks
+```
+
+Generator membuat controller, service, berkas route, dan stub test di `app/modules/tasks`.
+
+:::note Struktur direktori
+```
+app/modules/tasks/
+├─ controllers/
+│  └─ tasks-controller.ts
+├─ services/
+│  ├─ create-task-service.ts
+│  └─ list-tasks-service.ts
+├─ models/
+│  └─ task-model.ts
+└─ routes.ts
+```
+:::
+
+## 2. Implementasi health check
+
+Scaffold sudah menyertakan modul `health` seperti yang ditunjukkan pada [Apa itu Flowra?](../overview/what-is-flowra). Pastikan controllernya mengembalikan informasi uptime:
+
+```ts title="app/modules/health/services/health-service.ts"
+import {injectable} from 'tsyringe';
+
+@injectable()
+export class HealthService {
+  async getStatus() {
+    return {
+      status: 'ok',
+      uptime: process.uptime(),
+      timestamp: new Date().toISOString(),
+    };
+  }
+}
+```
+
+Setelah route diregistrasikan, jalankan perintah berikut untuk memastikan semuanya terhubung dengan benar:
+
+```bash
+curl http://localhost:3000/health
+# {"status":"ok","uptime":12.34,"timestamp":"2024-05-01T12:00:00.000Z"}
+```
+
+## 3. Buat model task
+
+Buka `app/modules/tasks/models/task-model.ts` dan definisikan skema tabel menggunakan Knex:
+
+```ts title="app/modules/tasks/models/task-model.ts"
+import {inject, injectable} from 'tsyringe';
+import type {Knex} from 'knex';
+
+@injectable()
+export class TaskModel {
+  constructor(@inject('database.default') private readonly db: Knex) {}
+
+  table() {
+    return this.db<TaskRecord>('tasks');
+  }
+
+  async create(payload: {title: string; completed?: boolean}) {
+    const [task] = await this.table()
+      .insert({...payload, completed: payload.completed ?? false})
+      .returning(['id', 'title', 'completed', 'created_at']);
+    return task;
+  }
+
+  async all() {
+    return this.table().select('id', 'title', 'completed', 'created_at').orderBy('created_at', 'desc');
+  }
+}
+
+export type TaskRecord = {
+  id: string;
+  title: string;
+  completed: boolean;
+  created_at: Date;
+};
+```
+
+:::tip Setup database
+Buat migration dengan `npx flowra make:migration create_tasks_table` dan tambahkan kolom `id`, `title`, `completed`, serta timestamps. Jalankan `npm run knex migrate:latest` setelah mengedit berkas migration.
+:::
+
+## 4. Hubungkan service dan controller
+
+Perbarui service yang dihasilkan CLI:
+
+```ts title="app/modules/tasks/services/create-task-service.ts"
+import {injectable} from 'tsyringe';
+import {TaskModel} from '../models/task-model';
+
+@injectable()
+export class CreateTaskService {
+  constructor(private readonly model: TaskModel) {}
+
+  async execute(input: {title: string}) {
+    return this.model.create({title: input.title});
+  }
+}
+```
+
+```ts title="app/modules/tasks/services/list-tasks-service.ts"
+import {injectable} from 'tsyringe';
+import {TaskModel} from '../models/task-model';
+
+@injectable()
+export class ListTasksService {
+  constructor(private readonly model: TaskModel) {}
+
+  async execute() {
+    return this.model.all();
+  }
+}
+```
+
+Sesuaikan controller untuk memanggil keduanya:
+
+```ts title="app/modules/tasks/controllers/tasks-controller.ts"
+import {injectable} from 'tsyringe';
+import type {Request, Response} from 'express';
+import {CreateTaskService} from '../services/create-task-service';
+import {ListTasksService} from '../services/list-tasks-service';
+
+@injectable()
+export class TasksController {
+  constructor(
+    private readonly createTask: CreateTaskService,
+    private readonly listTasks: ListTasksService,
+  ) {}
+
+  async index(req: Request, res: Response) {
+    const tasks = await this.listTasks.execute();
+    return res.json({data: tasks});
+  }
+
+  async store(req: Request, res: Response) {
+    const task = await this.createTask.execute({title: req.body.title});
+    return res.status(201).json({data: task});
+  }
+}
+```
+
+Perbarui `routes.ts` untuk mengekspos endpoint:
+
+```ts title="app/modules/tasks/routes.ts"
+import {Router} from 'express';
+import {useController} from '../../core/http/controller-resolver';
+import {TasksController} from './controllers/tasks-controller';
+
+export const registerTaskRoutes = (router: Router) => {
+  router.get('/tasks', useController(TasksController, 'index'));
+  router.post('/tasks', useController(TasksController, 'store'));
+};
+```
+
+Registrasikan modul di `main/bootstrap.ts`:
+
+```ts
+import {registerTaskRoutes} from '../app/modules/tasks/routes';
+
+export const bootstrap = async () => {
+  const app = await createHttpServer();
+  app.registerRoutes(registerTaskRoutes);
+  // ...
+};
+```
+
+## 5. Uji API
+
+```bash
+# Buat task
+curl -X POST http://localhost:3000/tasks \
+  -H 'Content-Type: application/json' \
+  -d '{"title":"Tulis dokumentasi Flowra"}'
+
+# Daftar task
+curl http://localhost:3000/tasks
+```
+
+Respons yang diharapkan:
+
+```json
+{
+  "data": [
+    {
+      "id": "01HXYZ...",
+      "title": "Tulis dokumentasi Flowra",
+      "completed": false,
+      "created_at": "2024-05-01T12:00:00.000Z"
+    }
+  ]
+}
+```
+
+## Kesalahan umum
+
+- Lupa mendaftarkan route modul di `main/bootstrap.ts`.
+- Tidak melakukan binding model/service di container (CLI sudah menangani ini; pertahankan ekspor `index.ts` yang dihasilkan).
+- Melewatkan validasi request—tambahkan validator di `validators/` atau bungkus controller dengan middleware.
+- Menjalankan migration pada database yang salah.
+
+:::warning Mengatasi error dependensi
+`ResolutionError` dari `tsyringe` menandakan container tidak bisa me-resolve dependensi. Pastikan kelas diberi dekorator `@injectable()` dan parameter constructor menggunakan kelas injectable atau token `@inject` eksplisit.
+:::
+
+Sekarang Anda memiliki modul yang berjalan. Kembangkan dengan validasi dan pengujian menggunakan panduan [Strategi Pengujian](../testing/strategy).

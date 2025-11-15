@@ -1,0 +1,50 @@
+---
+title: 'Filosofi Desain'
+description: 'Prinsip yang membentuk Flowra: struktur, keterujian, pemisahan concern, dan fleksibilitas pragmatis.'
+---
+
+Flowra secara sadar beropini. Framework ini memberi kompas untuk membangun backend yang mudah dirawat sekaligus memberi ruang agar tim dapat menyesuaikan detail implementasi. Memahami prinsip ini menjelaskan mengapa Flowra mengambil trade-off tertentu.
+
+## Nilai yang menggerakkan Flowra
+
+### Struktur eksplisit
+Flowra lebih memilih keterlacakan dibanding magic. Setiap fitur hidup di dalam modul yang menempatkan kontrak HTTP, logika bisnis, dan akses data secara berdampingan. Engineer baru cukup membuka `app/modules` untuk mengikuti alur request tanpa pencarian global.
+
+### Keterujian nomor satu
+Seluruh komponen runtime diregistrasikan melalui service container yang mendorong dependency injection. Controller menerima kolaborator via constructor sehingga unit test bisa fokus dan mocking menjadi sederhana.
+
+### Pemisahan tanggung jawab
+Route menangani pemetaan URL, controller mengorkestrasi perilaku HTTP, service membungkus logika domain, dan model mengelola persistensi. Pemisahan ini membuat tiap lapisan mudah dipahami dan direfaktor secara mandiri.
+
+### Dukungan multi-database
+Banyak tim mengelola lebih dari satu sumber data. Flowra memusatkan konfigurasi database dengan Knex, mendukung koneksi bernama, serta membiarkan modul mendeklarasikan koneksi yang dibutuhkan tanpa hard-code.
+
+## Beropini namun fleksibel
+
+Flowra menyediakan:
+
+- **Default terkurasi.** TypeScript, ESLint, Prettier, dan logging terstruktur sudah terpasang sejak awal.
+- **Scaffolding berbasis konvensi.** CLI menghasilkan berkas yang langsung mengikuti praktik terbaik yang dipromosikan framework.
+- **Hook ekstensi.** Anda bisa menimpa konfigurasi, mendaftarkan middleware kustom, atau mengganti implementasi dalam container tanpa mem-fork core.
+
+Jika perlu menyimpang dari default, Anda bisa melakukannya. Modul bebas mengganti pola bawaan, container dapat mendaftarkan service alternatif, dan Anda tetap dapat mengintegrasikan ORM atau message bus lain saat dibutuhkan.
+
+:::tip Fleksibel secara desain
+Flowra dibangun di atas Express dan Knex alih-alih menyembunyikannya. Ketika konvensi tidak cukup, Anda dapat turun ke pustaka dasarnya.
+:::
+
+## Flowra vs Express DIY
+
+| Dimensi | Flowra | Express DIY |
+| --- | --- | --- |
+| Struktur | Layout modul terstandar, scaffolding CLI, dan konfigurasi bersama | Bergantung kedisiplinan tim; struktur berbeda tiap fitur |
+| Manajemen dependensi | Container secara otomatis meresolusikan service dan resource bersama | Import manual dan pola singleton |
+| Akses data | Konfigurasi Knex terpusat dengan connection pooling dan migration | Setiap engineer memilih pola masing-masing |
+| Pengujian | Helper sadar-container untuk uji integrasi dan mock dependensi | Bootstrap kustom per proyek |
+| Kurva belajar | Konvensi beropini mengurangi beban keputusan | Harus menentukan arsitektur sejak hari pertama |
+
+:::warning Kapan DIY masuk akal
+Jika proyek Anda hanya handler webhook tunggal atau proof of concept cepat, Flowra bisa terasa terlalu banyak seremoni. Express polos atau fungsi serverless dapat dikirim lebih cepat saat arsitektur tidak perlu bertahan lama.
+:::
+
+Flowra ingin menjadi rumah jangka panjang bagi API, bukan sekadar template awal. Dengan mengikuti filosofinya Anda mendapatkan konsistensi, kosakata bersama, dan kepercayaan diri bahwa kode dapat tumbuh bersama tim.
