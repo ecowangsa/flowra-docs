@@ -1,0 +1,118 @@
+---
+title: Dokumentasi
+description: Dokumentasi Flowra untuk CLI, arsitektur framework, dan contoh dunia nyata.
+sidebar_position: 1
+---
+
+import Link from '@docusaurus/Link';
+
+<div className="flowra-docs-hero">
+  <div className="flowra-docs-hero-content">
+    <div className="flowra-docs-pill">Flowra v1.0.3</div>
+    <h1>Flowra memberi struktur untuk layanan Node.js</h1>
+    <p>
+      Dokumentasi Flowra membahas CLI, framework Express modular, dan contoh yang bisa dijalankan
+      agar Anda bisa menelusuri alur `request` dari awal sampai akhir.
+    </p>
+    <div className="flowra-docs-hero-actions">
+      <Link className="button button--primary button--lg" to="/docs/getting-started/installation">
+        Mulai
+      </Link>
+      <Link className="button button--secondary button--lg" to="/docs/cli/overview">
+        Ringkasan CLI
+      </Link>
+    </div>
+    <div className="flowra-docs-hero-meta">
+      <span className="flowra-docs-meta-badge">Node.js 18+</span>
+      <span className="flowra-docs-meta-badge">Express</span>
+      <span className="flowra-docs-meta-badge">Knex</span>
+      <span className="flowra-docs-meta-badge">Awilix</span>
+    </div>
+  </div>
+  <div className="flowra-docs-hero-panel">
+    <div className="flowra-docs-panel-title">Mulai dari sini</div>
+    <ol className="flowra-docs-panel-list">
+      <li>
+        <Link to="/docs/getting-started/installation">Instal Flowra CLI</Link>
+      </li>
+      <li>
+        <Link to="/docs/getting-started/first-api">Bangun API pertama</Link>
+      </li>
+      <li>
+        <Link to="/docs/examples/users-api">Jelajahi contoh API Users</Link>
+      </li>
+    </ol>
+  </div>
+</div>
+
+<section className="flowra-docs-section">
+  <div className="flowra-docs-section-header">
+    <h2>Pilih jalur Anda</h2>
+    <p>Pilih area yang ingin Anda fokuskan hari ini.</p>
+  </div>
+  <div className="flowra-docs-grid">
+    <div className="flowra-docs-card">
+      <div className="flowra-docs-card-title">CLI</div>
+      <p>Bangun modul, kelola migrasi, dan jaga proyek tetap selaras.</p>
+      <Link to="/docs/cli/commands">Jelajahi perintah CLI</Link>
+    </div>
+    <div className="flowra-docs-card">
+      <div className="flowra-docs-card-title">Framework</div>
+      <p>Pahami modul, `container`, dan siklus `request` dari awal sampai akhir.</p>
+      <Link to="/docs/architecture/request-lifecycle">Pelajari arsitektur</Link>
+    </div>
+    <div className="flowra-docs-card">
+      <div className="flowra-docs-card-title">Contoh</div>
+      <p>Lihat `route`, `service`, dan alur data pada API contoh lengkap.</p>
+      <Link to="/docs/examples/users-api">Buka API Users</Link>
+    </div>
+  </div>
+</section>
+
+<section className="flowra-docs-section flowra-docs-section-alt">
+  <div className="flowra-docs-section-header">
+    <h2>Yang akan Anda pelajari</h2>
+    <p>Alur inti yang membuat Flowra tetap konsisten saat skala membesar.</p>
+  </div>
+  <ul className="flowra-docs-list">
+    <li>Bagaimana Flowra menyambungkan dependensi dan menghubungkan modul ke Express.</li>
+    <li>Bagaimana merancang modul dengan `controller`, `service`, dan `model`.</li>
+    <li>Bagaimana mengatur environment, sumber data, dan logging.</li>
+    <li>Bagaimana menguji dan merilis pembaruan dengan aman.</li>
+  </ul>
+</section>
+
+<section className="flowra-docs-section">
+  <div className="flowra-docs-section-header">
+    <h2>Dokumentasi populer</h2>
+    <p>Tautan cepat ke halaman yang paling sering dibuka.</p>
+  </div>
+  <div className="flowra-docs-grid flowra-docs-grid-small">
+    <div className="flowra-docs-card">
+      <div className="flowra-docs-card-title">Struktur proyek</div>
+      <Link to="/docs/getting-started/project-structure">Lihat layout Flowra</Link>
+    </div>
+    <div className="flowra-docs-card">
+      <div className="flowra-docs-card-title">Service container</div>
+      <Link to="/docs/architecture/service-container">Pahami resolusi dependensi</Link>
+    </div>
+    <div className="flowra-docs-card">
+      <div className="flowra-docs-card-title">Konfigurasi environment</div>
+      <Link to="/docs/configuration/environment">Atur lingkungan</Link>
+    </div>
+    <div className="flowra-docs-card">
+      <div className="flowra-docs-card-title">Panduan rilis</div>
+      <Link to="/docs/release/upgrade-guide">Upgrade Flowra dengan aman</Link>
+    </div>
+  </div>
+</section>
+
+<section className="flowra-docs-cta">
+  <div>
+    <h2>Siap berkontribusi?</h2>
+    <p>Bantu meningkatkan framework, CLI, atau dokumentasi melalui panduan kontribusi.</p>
+  </div>
+  <Link className="button button--secondary button--lg" to="/docs/community/contributing">
+    Panduan kontribusi
+  </Link>
+</section>

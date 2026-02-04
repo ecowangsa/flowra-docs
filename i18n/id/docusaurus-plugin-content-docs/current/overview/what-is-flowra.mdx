@@ -1,0 +1,75 @@
+---
+title: 'Apa itu Flowra?'
+description: 'Flowra adalah framework Node.js modular yang dibangun di atas Express dengan CLI, service container, dan struktur proyek yang konsisten.'
+---
+
+Flowra adalah framework Node.js modular yang dibangun di atas Express. Flowra memberi tim struktur yang jelas, service container dengan dependency injection, dan CLI yang membuat kode konsisten. Anda menulis JavaScript biasa, tetap memakai semantik Express, dan mendapatkan framework yang bisa berkembang bersama API Anda.
+
+## Sekilas
+
+- **Lapisan HTTP kompatibel Express** dengan middleware dan routing yang familiar.
+- **Arsitektur berbasis modul** yang mengelompokkan routes, controllers, services, dan models.
+- **Dependency injection** melalui container yang me-resolve service berdasarkan nama.
+- **Lapisan data berbasis Knex** dengan beberapa alias koneksi.
+- **CLI tooling** untuk scaffolding, migrasi, health check, dan cleanup.
+
+## Komponen inti
+
+| Komponen | Tujuan | Lokasi |
+| --- | --- | --- |
+| Modules | Slice fitur berisi routes, controllers, services, dan models | `app/Modules/` |
+| Container | Dependency injection dan registrasi module scope | `app/Bootstrap/Container/` |
+| HTTP bootstrap | Setup Express, middleware, dan routing | `app/Bootstrap/server.bootstrap.js` |
+| Configuration | Konfigurasi berbasis environment untuk app, DB, cache, logging | `app/Config/` |
+| CLI | Membuat proyek, generator, dan utilitas dev | `flowra` (dari `flowra-cli`) |
+
+## Modul minimal
+
+Buat modul dengan CLI:
+
+```bash
+flowra make:module status
+```
+
+Flowra akan memasang modul di `app/Modules/modules.manifest.js` dan membuat boilerplate. File route terlihat seperti ini:
+
+```js title="app/Modules/Status/status.routes.js"
+'use strict';
+
+function registerStatusRoutes({ router, container } = {}) {
+  if (!router || !container) {
+    return router;
+  }
+
+  const controller = container.resolve('modules.status.controllers.main');
+  router.get('/status', controller.index.bind(controller));
+
+  return router;
+}
+
+module.exports = registerStatusRoutes;
+```
+
+Controller yang dihasilkan sudah memanggil layer service, jadi Anda hanya perlu mengisi logic yang bermakna:
+
+```js title="app/Modules/Status/Status.service.js"
+'use strict';
+
+class StatusService {
+  async list() {
+    return {
+      ok: true,
+      uptime: process.uptime(),
+      node: process.version,
+    };
+  }
+}
+
+module.exports = StatusService;
+```
+
+Jalankan server dan akses `GET /status`.
+
+:::tip Langkah berikutnya
+Baca [Design Philosophy](./philosophy) untuk memahami prinsip Flowra, atau langsung ke [Installation](../getting-started/installation).
+:::

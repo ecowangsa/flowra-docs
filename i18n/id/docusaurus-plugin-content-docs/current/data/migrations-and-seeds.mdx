@@ -1,0 +1,71 @@
+---
+title: 'Migrations & Seeds'
+description: 'Buat, jalankan, dan kelola migrasi serta seed database dengan Flowra CLI.'
+---
+
+Flowra membungkus Knex migrations dan seeds melalui CLI yang membaca `orm.cli.config.js`.
+
+## Buat migration
+
+```bash
+flowra db:migrate:make create_users_table
+```
+
+Secara default, migration disimpan di `app/Database/Migrations`.
+
+## Jalankan migrations
+
+```bash
+flowra db:migrate:latest
+```
+
+## Rollback
+
+```bash
+flowra db:rollback
+flowra db:rollback --all
+```
+
+## Status migration
+
+```bash
+flowra db:status
+```
+
+## Seeds
+
+Buat seed:
+
+```bash
+flowra db:seed:make seed_users
+```
+
+Jalankan seed:
+
+```bash
+flowra db:seed:run
+```
+
+## Contoh migration
+
+```js title="app/Database/Migrations/20251025213153_create_table_users.js"
+exports.up = function(knex) {
+  return knex.schema.createTable('users', function(table) {
+    table.increments('id').primary();
+    table.string('username').notNullable().unique();
+    table.string('email').notNullable().unique();
+    table.string('password').notNullable();
+    table.timestamp('createdAt').nullable();
+    table.timestamp('updatedAt').nullable();
+    table.timestamp('deletedAt').nullable();
+  });
+};
+
+exports.down = function(knex) {
+  return knex.schema.dropTableIfExists('users');
+};
+```
+
+:::note Alias koneksi
+Gunakan `--env <alias>` pada command migration dan seed untuk menargetkan konfigurasi database tertentu.
+:::

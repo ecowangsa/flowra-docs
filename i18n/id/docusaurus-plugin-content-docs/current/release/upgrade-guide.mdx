@@ -1,0 +1,50 @@
+---
+title: 'Panduan Upgrade'
+description: 'Upgrade Flowra CLI dan proyek Anda dengan aman.'
+---
+
+Gunakan checklist ini untuk upgrade Flowra secara aman.
+
+## 1. Baca changelog
+
+Baca [Flowra CLI changelog](https://github.com/ecowangsa/flowra-cli/blob/main/CHANGELOG.md) sebelum upgrade.
+
+## 2. Upgrade CLI
+
+Instal global:
+
+```bash
+npm install -g flowra-cli@latest
+```
+
+Instal lokal proyek:
+
+```bash
+npm install --save-dev flowra-cli@latest
+```
+
+## 3. Update dependencies
+
+Jika scaffold menambah atau menaikkan dependencies, perbarui `package.json` dan jalankan:
+
+```bash
+npm install
+```
+
+## 4. Jalankan test dan lint
+
+```bash
+npm test
+npm run lint
+```
+
+## 5. Validasi runtime
+
+```bash
+flowra env:check
+flowra health:check
+```
+
+:::tip Upgrade bertahap
+Untuk upgrade besar, naikkan satu minor/major versi per langkah dan siapkan rollback.
+:::

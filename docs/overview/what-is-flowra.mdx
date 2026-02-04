@@ -1,0 +1,75 @@
+---
+title: 'What is Flowra?'
+description: 'Flowra is a modular Node.js framework built on Express with a CLI, a service container, and a predictable project structure.'
+---
+
+Flowra is a modular Node.js framework built on Express. It gives teams a clear structure, a dependency-injected service container, and a CLI that scaffolds consistent code. You write plain JavaScript, keep Express semantics, and gain a framework that scales with your API.
+
+## At a glance
+
+- **Express-compatible HTTP layer** with familiar middleware and routing.
+- **Module-first architecture** that groups routes, controllers, services, and models.
+- **Dependency injection** through a container that resolves services by name.
+- **Knex-powered data layer** with multiple connection aliases.
+- **CLI tooling** for scaffolding, migrations, health checks, and cleanup.
+
+## Core building blocks
+
+| Block | Purpose | Where it lives |
+| --- | --- | --- |
+| Modules | Feature slices containing routes, controllers, services, and models | `app/Modules/` |
+| Container | Dependency injection and scoped module registration | `app/Bootstrap/Container/` |
+| HTTP bootstrap | Express setup, middleware, and routing | `app/Bootstrap/server.bootstrap.js` |
+| Configuration | Environment-driven config for app, DB, cache, logging | `app/Config/` |
+| CLI | Project creation, generators, and dev utilities | `flowra` (from `flowra-cli`) |
+
+## A minimal module
+
+Create a module with the CLI:
+
+```bash
+flowra make:module status
+```
+
+Flowra wires the module into `app/Modules/modules.manifest.js` and generates the boilerplate. A route file looks like this:
+
+```js title="app/Modules/Status/status.routes.js"
+'use strict';
+
+function registerStatusRoutes({ router, container } = {}) {
+  if (!router || !container) {
+    return router;
+  }
+
+  const controller = container.resolve('modules.status.controllers.main');
+  router.get('/status', controller.index.bind(controller));
+
+  return router;
+}
+
+module.exports = registerStatusRoutes;
+```
+
+The generated controller already calls the service layer, so you only need to update the service method to return meaningful data:
+
+```js title="app/Modules/Status/Status.service.js"
+'use strict';
+
+class StatusService {
+  async list() {
+    return {
+      ok: true,
+      uptime: process.uptime(),
+      node: process.version,
+    };
+  }
+}
+
+module.exports = StatusService;
+```
+
+Start the server and hit `GET /status`.
+
+:::tip Next steps
+Read [Design Philosophy](./philosophy) to understand the principles behind Flowra, or jump straight to [Installation](../getting-started/installation).
+:::

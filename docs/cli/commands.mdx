@@ -1,0 +1,224 @@
+---
+title: 'CLI Command Reference'
+description: 'A detailed reference of every Flowra CLI command and option.'
+---
+
+This page documents all commands available in `flowra`.
+
+## Global usage
+
+```bash
+flowra <command> [options]
+```
+
+Run `flowra list` to see available commands, or `flowra <command> --help` for details.
+
+## Project setup
+
+### `create-app <projectName>`
+Create a new Flowra project scaffold.
+
+Options:
+
+- `-f, --force` Overwrite existing files when the target directory is not empty.
+- `--framework-version <version>` Override the Flowra CLI version in `package.json`.
+
+Aliases:
+
+- `create` (same as `create-app`)
+
+Example:
+
+```bash
+flowra create-app my-api --framework-version 1.0.0
+```
+
+### `list`
+Print all registered commands.
+
+## Server commands
+
+### `serve`
+Run the HTTP server using the configured `APP_PORT`.
+
+Options:
+
+- `-p, --port <port>` Override the configured port.
+- `--once` Start the server and shut it down immediately after it is ready.
+
+### `serve:watch`
+Start the server with hot reload using `nodemon`.
+
+Options:
+
+- `-p, --port <port>` Override the configured port.
+
+## Routing
+
+### `route:list`
+Display registered routes from all enabled modules.
+
+## Modules
+
+### `module:list`
+List module names, enabled status, and path from the manifest.
+
+### `module:enable <name>`
+Enable a module by kebab-case name.
+
+### `module:disable <name>`
+Disable a module by kebab-case name.
+
+## Scaffolding
+
+### `make:module <name>`
+Generate a module scaffold and update the manifest.
+
+Options:
+
+- `--force` Overwrite existing module directory.
+- `--controllers <controllers>` Comma-separated list of controller segments (e.g. `registrations,sessions`).
+
+### `make:model <name>`
+Generate a model.
+
+Options:
+
+- `--db <alias>` Database connection alias.
+- `--table <name>` Override the table name.
+- `--module <module>` Target module to own the model.
+
+### `make:controller <name>`
+Generate a controller inside an existing module.
+
+Options:
+
+- `--module <module>` Target module.
+
+### `make:service <name>`
+Generate a service inside an existing module.
+
+Options:
+
+- `--module <module>` Target module.
+
+### `make:route <name>`
+Generate a route file inside an existing module.
+
+Options:
+
+- `--module <module>` Target module.
+
+### `make:validator <name>`
+Generate a Zod validator inside an existing module.
+
+Options:
+
+- `--module <module>` Target module.
+
+### `make:query <name>`
+Generate a query helper inside an existing module.
+
+Options:
+
+- `--module <module>` Target module.
+
+### `make:resource <name>`
+Generate a full REST resource scaffold (module + model + routes).
+
+Options:
+
+- `--db <alias>` Database connection alias.
+
+## Database
+
+### `db:migrate:make <name>`
+Create a migration file.
+
+Options:
+
+- `--env <alias>` Database alias configured in `orm.cli.config.js`.
+
+### `db:migrate:latest`
+Run pending migrations.
+
+Options:
+
+- `--env <alias>` Database alias configured in `orm.cli.config.js`.
+
+### `db:rollback`
+Roll back the latest batch of migrations.
+
+Options:
+
+- `--env <alias>` Database alias configured in `orm.cli.config.js`.
+- `--all` Roll back all batches.
+
+### `db:status`
+Show migration status.
+
+Options:
+
+- `--env <alias>` Database alias configured in `orm.cli.config.js`.
+
+### `db:seed:make <name>`
+Create a seed file.
+
+Options:
+
+- `--env <alias>` Database alias configured in `orm.cli.config.js`.
+
+### `db:seed:run`
+Execute seeds.
+
+Options:
+
+- `--env <alias>` Database alias configured in `orm.cli.config.js`.
+
+## Environment
+
+### `env:example`
+Regenerate `.env.example` in the current project.
+
+### `env:check`
+Validate required environment variables. Exits with code 1 if any are missing.
+
+## Configuration
+
+### `config:print`
+Print active runtime configuration.
+
+Options:
+
+- `--namespace <namespace>` Limit output to a config namespace (e.g. `app` or `database`).
+
+## Health
+
+### `health:check`
+Validate database connections.
+
+Options:
+
+- `--json` Print machine-readable JSON output.
+
+## Cleanup
+
+### `clean:analyze`
+Dry-run cleanup analysis. Lists orphaned modules and missing targets.
+
+### `clean:prune`
+Delete flagged files and folders.
+
+Options:
+
+- `--yes` Confirm deletion of orphaned resources.
+- `--force` Force deletion using `rm -rf` semantics.
+
+## Docs
+
+### `docs:generate`
+Generate starter documentation for the current Flowra project.
+
+Options:
+
+- `-o, --output <file>` Output file path (default: `docs/overview.md`).

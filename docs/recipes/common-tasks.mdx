@@ -1,0 +1,62 @@
+---
+title: 'Common Tasks'
+description: 'Everyday workflows for working with Flowra projects.'
+---
+
+This page captures common tasks and where they live in the Flowra scaffold.
+
+## Add a new module
+
+```bash
+flowra make:module inventory
+```
+
+Update `app/Modules/modules.manifest.js` if you want to disable or reorder modules.
+
+## Enable or disable a module
+
+```bash
+flowra module:disable inventory
+flowra module:enable inventory
+```
+
+## Add a global middleware
+
+Edit `app/Bootstrap/server.bootstrap.js` and add middleware before routes are registered:
+
+```js
+app.use(myMiddleware());
+const routes = new HttpRouter(container).defineRoutes();
+app.use(routes);
+```
+
+## Add a provider
+
+Create a provider in `app/Providers/` and register it in `app/Config/App.js`:
+
+```js
+providers: ['Providers/AppServiceProvider']
+```
+
+## Use cache or Redis
+
+Resolve the cache manager from the container:
+
+```js
+const cache = container.resolve('cacheManager');
+const redis = await cache.client('redis');
+```
+
+## Add a background queue
+
+Flowra supports BullMQ when installed. Configure it under `queue` in `app/Config` and resolve it via `queueFactory`.
+
+## Refresh `.env.example`
+
+```bash
+flowra env:example
+```
+
+:::tip Keep tasks repeatable
+Prefer CLI commands over manual edits so your team stays consistent.
+:::

@@ -1,0 +1,39 @@
+---
+title: 'CLI Overview'
+description: 'The Flowra CLI powers project creation, scaffolding, and operational commands.'
+---
+
+Flowra CLI ships as the `flowra` executable. It scaffolds projects, manages modules, and wraps common operational tasks like migrations and health checks.
+
+## Install and run
+
+```bash
+npm install -g flowra-cli
+flowra --help
+```
+
+If installed locally:
+
+```bash
+npm install --save-dev flowra-cli
+npx flowra --help
+```
+
+## Project detection
+
+All commands except `create-app` and `list` must be run inside a Flowra project. The CLI detects a project when `package.json` contains `flowra` or `flowra-cli` in dependencies.
+
+## Handy commands
+
+```bash
+flowra list
+flowra serve
+flowra serve:watch
+flowra route:list
+flowra module:list
+flowra health:check
+```
+
+:::tip Need details?
+Run `flowra <command> --help` for command-specific options.
+:::

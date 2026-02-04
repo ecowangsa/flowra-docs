@@ -1,0 +1,433 @@
+---
+title: 'Buat API Pertama Anda'
+description: 'Bangun modul Users dengan CRUD + autentikasi, validasi request, dan wiring lengkap di Flowra.'
+---
+
+Panduan ini menjelaskan pembuatan modul `Users` secara end-to-end: scaffolding, `model`, `service`, `container`, `controller`, `route`, validasi, dan inspeksi `route`.
+
+## 1. Buat modul dan scaffold
+
+Mulai dengan membuat modul, model, dan validator:
+
+```bash
+flowra make:module users --controllers users,auth
+flowra make:model user --module users --table users
+flowra make:validator user --module users
+```
+
+Flowra membuat `app/Modules/Users` dan memperbarui manifest. Anda sekarang punya:
+
+- `users.module.js` (entry modul)
+- `users.container.js` (registrasi container)
+- `users.routes.js` (`route` Express)
+- `Users.controller.js` + `Auth.controller.js`
+- `Users.service.js`
+- `Users.model.js`
+
+## 2. Buat migrasi dan jalankan database
+
+Sebelum mengubah model, buat migrasi agar skema database siap:
+
+```bash
+flowra db:migrate:make create_users_table
+flowra db:migrate:latest
+```
+
+Definisikan tabel `users` di file migrasi dengan kolom seperti `id`, `name`, `email`, `password_hash`, dan `timestamp`.
+
+Berikut contoh migrasi minimal:
+
+```js title="database/migrations/2026_02_03_000000_create_users_table.js"
+exports.up = function (knex) {
+  return knex.schema.createTable('users', (table) => {
+    table.increments('id').primary();
+    table.string('name').notNullable();
+    table.string('email').notNullable().unique();
+    table.string('password_hash').notNullable();
+    table.timestamps(true, true);
+  });
+};
+
+exports.down = function (knex) {
+  return knex.schema.dropTable('users');
+};
+```
+
+## 3. Perbarui model (Query Builder + Knex)
+
+Model adalah tempat untuk memusatkan akses database. Model Flowra membungkus query builder Knex, sehingga Anda bisa merangkai `select`, `where`, `limit`, dan join.
+
+Tambahkan helper `getAll` dan `getSingle` yang sederhana agar mudah dipakai ulang:
+
+```js title="app/Modules/Users/Users.model.js"
+const Model = require('../../Config/Model');
+
+class UsersModel extends Model {
+  constructor(connection = 'default') {
+    super(connection);
+    this.setTable('users');
+    this.setPrimaryKey('id');
+    this.setAllowedFields(['id', 'name', 'email', 'password_hash']);
+    this.setTimestamps(true);
+    this.setSoftDelete(false);
+  }
+
+  getAll({ search, limit = 25, offset = 0 } = {}) {
+    const query = this.read()
+      .select('id', 'name', 'email', 'createdAt')
+      .orderBy('createdAt', 'desc')
+      .limit(limit)
+      .offset(offset);
+
+    if (search) {
+      query.where((builder) => {
+        builder
+          .where('email', 'like', `%${search}%`)
+          .orWhere('name', 'like', `%${search}%`);
+      });
+    }
+
+    return query;
+  }
+
+  getSingle(id) {
+    return this.read()
+      .select('id', 'name', 'email', 'createdAt')
+      .where({ id })
+      .first();
+  }
+
+  findByEmail(email) {
+    return this.read()
+      .select('id', 'name', 'email', 'password_hash')
+      .where({ email })
+      .first();
+  }
+}
+
+module.exports = UsersModel;
+```
+
+Ini memakai layer **Query Builder (Knex)** Flowra. Untuk pola dan contoh lain, lihat bagian [Query Builder](../data/models-and-queries#query-builder-knex).
+
+## 4. Perbarui service
+
+Service menangani logika bisnis. Biarkan model menangani query database.
+
+```js title="app/Modules/Users/Users.service.js"
+const HttpError = require('../../Errors/HttpError');
+
+class UsersService {
+  constructor({ models } = {}) {
+    this.usersModel = models.user;
+  }
+
+  async list({ search, limit, offset } = {}) {
+    return this.usersModel.getAll({ search, limit, offset });
+  }
+
+  async get(id) {
+    const user = await this.usersModel.getSingle(id);
+    if (!user) {
+      throw new HttpError(404, 'User not found');
+    }
+    return user;
+  }
+
+  async create(payload) {
+    const id = await this.usersModel.save({
+      name: payload.name,
+      email: payload.email,
+    });
+    return this.get(id);
+  }
+
+  async update(id, payload) {
+    await this.usersModel.update(id, payload);
+    return this.get(id);
+  }
+
+  async remove(id) {
+    await this.usersModel.delete(id);
+    return { ok: true };
+  }
+}
+
+module.exports = UsersService;
+```
+
+Untuk alur autentikasi, tambahkan service terpisah agar login/registrasi terpisah dari operasi CRUD:
+
+```js title="app/Modules/Users/Auth.service.js"
+const HttpError = require('../../Errors/HttpError');
+
+class AuthService {
+  constructor({ models, passwordHasher } = {}) {
+    this.usersModel = models.user;
+    this.passwordHasher = passwordHasher;
+  }
+
+  async register(payload) {
+    const passwordHash = await this.passwordHasher.hash(payload.password);
+    const id = await this.usersModel.save({
+      name: payload.name,
+      email: payload.email,
+      password_hash: passwordHash,
+    });
+    return this.usersModel.getSingle(id);
+  }
+
+  async login({ email, password }) {
+    const user = await this.usersModel.findByEmail(email);
+    if (!user) {
+      throw new HttpError(401, 'Invalid credentials');
+    }
+
+    const valid = await this.passwordHasher.compare(password, user.password_hash);
+    if (!valid) {
+      throw new HttpError(401, 'Invalid credentials');
+    }
+
+    return {
+      user: { id: user.id, name: user.name, email: user.email },
+      token: 'replace-with-jwt',
+    };
+  }
+}
+
+module.exports = AuthService;
+```
+
+Daftarkan `passwordHasher` di container utama (misalnya memakai bcrypt atau argon2) agar `service` bisa melakukan hash dan membandingkan password.
+
+
+## 5. Controller dengan validasi
+
+Controller memvalidasi data masuk lalu memanggil service.
+
+```js title="app/Modules/Users/Users.controller.js"
+const HttpError = require('../../Errors/HttpError');
+
+class UsersController {
+  constructor({ services, validationFactory } = {}) {
+    this.usersService = services.users;
+    this.validationFactory = validationFactory;
+  }
+
+  get createRules() {
+    return {
+      name: { required: true },
+      email: { required: true, is_email: true },
+    };
+  }
+
+  get updateRules() {
+    return {
+      name: { required: false },
+      email: { required: false, is_email: true },
+    };
+  }
+
+  async list(req, res) {
+    const users = await this.usersService.list(req.query);
+    return res.json(users);
+  }
+
+  async show(req, res) {
+    const user = await this.usersService.get(req.params.id);
+    return res.json(user);
+  }
+
+  async create(req, res) {
+    const validator = this.validationFactory(this.createRules);
+    const errors = await validator.validate(req.body);
+    if (errors.length > 0) {
+      throw new HttpError(422, 'Validation failed', errors);
+    }
+
+    const user = await this.usersService.create({
+      name: req.body.name,
+      email: req.body.email,
+    });
+
+    return res.status(201).json(user);
+  }
+
+  async update(req, res) {
+    const validator = this.validationFactory(this.updateRules);
+    const errors = await validator.validate(req.body);
+    if (errors.length > 0) {
+      throw new HttpError(422, 'Validation failed', errors);
+    }
+
+    const user = await this.usersService.update(req.params.id, req.body);
+    return res.json(user);
+  }
+
+  async destroy(req, res) {
+    await this.usersService.remove(req.params.id);
+    return res.status(204).send();
+  }
+}
+
+module.exports = UsersController;
+```
+
+Contoh controller autentikasi:
+
+```js title="app/Modules/Users/Auth.controller.js"
+const HttpError = require('../../Errors/HttpError');
+
+class AuthController {
+  constructor({ services, validationFactory } = {}) {
+    this.authService = services.auth;
+    this.validationFactory = validationFactory;
+  }
+
+  get registerRules() {
+    return {
+      name: { required: true },
+      email: { required: true, is_email: true },
+      password: { required: true, minLength: 8 },
+    };
+  }
+
+  get loginRules() {
+    return {
+      email: { required: true, is_email: true },
+      password: { required: true },
+    };
+  }
+
+  async register(req, res) {
+    const validator = this.validationFactory(this.registerRules);
+    const errors = await validator.validate(req.body);
+    if (errors.length > 0) {
+      throw new HttpError(422, 'Validation failed', errors);
+    }
+
+    const user = await this.authService.register(req.body);
+    return res.status(201).json(user);
+  }
+
+  async login(req, res) {
+    const validator = this.validationFactory(this.loginRules);
+    const errors = await validator.validate(req.body);
+    if (errors.length > 0) {
+      throw new HttpError(422, 'Validation failed', errors);
+    }
+
+    const result = await this.authService.login(req.body);
+    return res.json(result);
+  }
+}
+
+module.exports = AuthController;
+```
+
+## 6. Hubungkan routes
+
+Hubungkan controller di `users.routes.js` agar HTTP layer memanggil logic yang benar:
+
+```js title="app/Modules/Users/users.routes.js"
+'use strict';
+
+function registerUsersRoutes({ router, container } = {}) {
+  if (!router || !container) {
+    return router;
+  }
+
+  const usersController = container.resolve('modules.users.controllers.users');
+  const authController = container.resolve('modules.users.controllers.auth');
+
+  router.get('/users', usersController.list.bind(usersController));
+  router.get('/users/:id', usersController.show.bind(usersController));
+  router.post('/users', usersController.create.bind(usersController));
+  router.patch('/users/:id', usersController.update.bind(usersController));
+  router.delete('/users/:id', usersController.destroy.bind(usersController));
+
+  router.post('/auth/register', authController.register.bind(authController));
+  router.post('/auth/login', authController.login.bind(authController));
+
+  return router;
+}
+
+module.exports = registerUsersRoutes;
+```
+
+
+## 7. Daftarkan semuanya di container
+
+Hubungkan `model`, `service`, `controller`, dan `route` di container modul agar Flowra bisa menyambungkan dependensinya:
+
+```js title="app/Modules/Users/users.container.js"
+const { asClass, asValue } = require('awilix');
+const UsersModel = require('./Users.model');
+const UsersService = require('./Users.service');
+const AuthService = require('./Auth.service');
+const UsersController = require('./Users.controller');
+const AuthController = require('./Auth.controller');
+const registerUsersRoutes = require('./users.routes');
+
+module.exports = (scope) => {
+  scope.register({
+    models: {
+      user: asClass(UsersModel).singleton(),
+    },
+    services: {
+      users: asClass(UsersService).singleton(),
+      auth: asClass(AuthService).singleton(),
+    },
+    controllers: {
+      users: asClass(UsersController).singleton(),
+      auth: asClass(AuthController).singleton(),
+    },
+    routes: asValue(registerUsersRoutes),
+  });
+};
+```
+## 8. Validasi modul dan cek routes
+
+Flowra menyediakan perintah untuk mengaktifkan/menonaktifkan modul dan melihat daftar routes:
+
+```bash
+flowra module:list
+flowra module:disable users
+flowra module:enable users
+flowra route:list
+```
+
+Ini cara tercepat untuk memastikan modul sudah terpasang sebelum menguji request.
+
+## 9. Contoh alur UI CRUD
+
+Alur UI tipikal akan memanggil endpoint berikut:
+
+- **Form registrasi** → `POST /auth/register`
+- **Form login** → `POST /auth/login`
+- **Daftar users** → `GET /users`
+- **Detail user** → `GET /users/:id`
+- **Edit profil** → `PATCH /users/:id`
+- **Hapus user** → `DELETE /users/:id`
+
+Semua flow ini langsung terhubung ke controller yang Anda buat.
+
+## 10. Jalankan server
+
+Sebelum menjalankan, cek environment variables:
+
+```bash
+flowra env:check
+```
+
+Jalankan server:
+
+```bash
+npm run dev
+```
+
+Buka `http://localhost:3387/users` untuk memastikan API mengembalikan data.
+
+:::tip Langkah berikutnya
+Pelajari [Routing guide](../routing/routes-and-controllers) atau perdalam data layer di [Models & Queries](../data/models-and-queries).
+:::

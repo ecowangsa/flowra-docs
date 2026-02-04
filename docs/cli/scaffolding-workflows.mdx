@@ -1,0 +1,82 @@
+---
+title: 'Scaffolding Workflows'
+description: 'Understand what each Flowra generator creates and how to customize the output.'
+---
+
+Flowra generators are designed to keep naming and structure consistent across modules. They write CommonJS files that match the scaffolded project style.
+
+## Module scaffold
+
+```bash
+flowra make:module billing --controllers payments,refunds
+```
+
+Creates:
+
+- `app/Modules/Billing/billing.module.js`
+- `app/Modules/Billing/billing.container.js`
+- `app/Modules/Billing/billing.routes.js`
+- Controller files for each controller segment
+- `Billing.service.js`, `Billing.validator.js`, `Billing.query.js`
+
+The module is also added to `app/Modules/modules.manifest.js` automatically.
+
+## Model generation
+
+```bash
+flowra make:model user --module users --table users --db default
+```
+
+Creates a model in the module directory (`Users.model.js`) that extends the `Model` base class.
+
+If you omit `--module`, the model is created under `app/Models` (created if missing).
+
+## Controller and service generation
+
+```bash
+flowra make:controller audit --module users
+flowra make:service audit --module users
+```
+
+These commands generate new files inside the target module and leave wiring up to you.
+
+## Route generation
+
+```bash
+flowra make:route audit --module users
+```
+
+Generates a simple route file and binds it to the module's main controller. You can import and call the route function from your module routes file.
+
+## Validator generation
+
+```bash
+flowra make:validator user --module users
+```
+
+Generates a Zod-based validator file. Remember to install `zod` if it is not already in your project.
+
+## Query generation
+
+```bash
+flowra make:query report --module analytics
+```
+
+Creates a query helper class for read-only operations.
+
+## Resource scaffold
+
+```bash
+flowra make:resource tasks
+```
+
+Generates a module scaffold plus:
+
+- A model for the resource
+- `resource.routes.js` with RESTful routes
+
+After running, update your module to use the `resource.routes.js` file or merge those routes into your existing module routes.
+
+:::tip Prefer the CLI
+The CLI generates container wiring and naming conventions that are easy to miss by hand.
+:::

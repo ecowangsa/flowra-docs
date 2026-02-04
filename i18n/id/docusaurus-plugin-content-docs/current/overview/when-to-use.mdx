@@ -1,0 +1,30 @@
+---
+title: 'Kapan Menggunakan Flowra'
+description: 'Pahami proyek seperti apa yang paling cocok dengan Flowra dan kapan pendekatan yang lebih ringan lebih tepat.'
+---
+
+Flowra kuat ketika proyek membutuhkan batas yang jelas, pola yang berulang, dan developer experience yang konsisten. Jika itu penting, Flowra kemungkinan cocok.
+
+## Flowra sangat cocok ketika
+
+- Anda membangun **API modular** dengan banyak fitur atau tim.
+- Anda ingin **pola service dan controller yang konsisten** di seluruh codebase.
+- Anda butuh **scaffolding yang repeatable** untuk modul, migrasi, dan resource.
+- API Anda membutuhkan **akses database dengan konvensi jelas** dan manajemen koneksi.
+- Anda ingin **kompatibilitas Express** dengan struktur dan tooling tambahan.
+
+## Flowra mungkin terlalu berat ketika
+
+- Proyek hanya **satu endpoint** atau skrip jangka pendek.
+- Anda deploy **serverless functions** dan ukuran cold-start sangat penting.
+- Anda ingin **prototipe cepat tanpa struktur** yang tidak akan dipelihara.
+
+## Cek keputusan cepat
+
+| Pertanyaan | Jika "ya" | Jika "tidak" |
+| --- | --- | --- |
+| Apakah API akan tumbuh lebih dari beberapa route? | Flowra membantu menjaga organisasi. | Express saja mungkin cukup. |
+| Apakah ada banyak developer atau tim? | Flowra memberi pola bersama. | Setup lebih ringan bisa cukup. |
+| Apakah Anda menghargai scaffolding dan struktur konsisten? | Flowra sangat cocok. | Anda bisa melewati layer framework. |
+
+Flowra bukan tentang menambah kerumitan. Flowra memberi sistem yang jelas dan repeatable saat codebase mulai tumbuh.

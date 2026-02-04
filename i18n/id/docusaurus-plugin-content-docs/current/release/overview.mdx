@@ -1,0 +1,49 @@
+---
+title: 'Rilis & Versioning'
+description: 'Bagaimana Flowra melakukan versioning CLI, bagaimana proyek mem-pin dependency, dan di mana melacak perubahan.'
+---
+
+Flowra didistribusikan sebagai package npm (`flowra-cli`). Versi CLI adalah artefak rilis utama dan dipakai untuk membuat proyek.
+
+## Pemetaan versi ke proyek
+
+Saat Anda menjalankan:
+
+```bash
+flowra create-app my-app
+```
+
+Flowra mem-pin proyek ke versi CLI saat ini. Anda bisa override versi tersebut dengan:
+
+```bash
+flowra create-app my-app --framework-version 1.0.0
+```
+
+Ini mengatur versi `flowra-cli` yang tersimpan di `package.json`.
+
+## Cek versi CLI
+
+```bash
+flowra --version
+```
+
+## Catatan kompatibilitas
+
+Scaffold default menyertakan:
+
+- Node.js 18+
+- Express 4.x
+- Knex 3.x
+- MySQL2 3.x
+
+Jika Anda meng-upgrade dependency, pastikan `package.json` sudah sesuai dan jalankan test.
+
+## Di mana melacak perubahan
+
+Lihat changelog untuk detail tiap rilis:
+
+- [Flowra CLI changelog](https://github.com/ecowangsa/flowra-cli/blob/main/CHANGELOG.md)
+
+:::tip Upgrade produksi
+Selalu baca changelog sebelum upgrade dan uji di staging.
+:::

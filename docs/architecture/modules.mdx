@@ -1,0 +1,69 @@
+---
+title: 'Modules'
+description: 'Modules are the core building blocks in Flowra. They package routes, controllers, services, and models together.'
+---
+
+Modules are feature slices. Each module can own its routes, controllers, services, models, and queries. Flowra discovers modules from the manifest and registers them into the container.
+
+## Module manifest
+
+`app/Modules/modules.manifest.js` controls which modules are loaded:
+
+```js title="app/Modules/modules.manifest.js"
+module.exports = {
+  modules: [
+    {
+      name: 'users',
+      path: './Users/users.module.js',
+      enabled: true,
+      description: 'Sample user management module.',
+    },
+  ],
+};
+```
+
+Disable a module by setting `enabled: false` or using the CLI:
+
+```bash
+flowra module:disable users
+```
+
+## Module definition
+
+Each module exports an object with a name, register function, and routes:
+
+```js title="app/Modules/Users/users.module.js"
+'use strict';
+
+const registerContainer = require('./users.container');
+const registerRoutes = require('./users.routes');
+
+module.exports = {
+  name: 'users',
+  register: registerContainer,
+  routes: registerRoutes,
+  aliases: {},
+};
+```
+
+## Standard module layout
+
+```text
+app/Modules/Users/
+├─ Users.controller.js
+├─ Users.model.js
+├─ Users.service.js
+├─ users.container.js
+├─ users.module.js
+└─ users.routes.js
+```
+
+## CLI helpers
+
+- `flowra module:list` shows module status.
+- `flowra module:enable <name>` enables a module.
+- `flowra module:disable <name>` disables a module.
+
+:::tip Naming
+Flowra normalizes module names to kebab-case in the manifest. Directory names are PascalCase by default.
+:::

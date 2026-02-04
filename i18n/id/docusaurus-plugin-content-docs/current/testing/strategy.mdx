@@ -1,0 +1,50 @@
+---
+title: 'Strategi Testing'
+description: 'Gunakan test runner bawaan Node dan struktur modular Flowra untuk menguji services dan routes.'
+---
+
+Flowra tidak memaksa satu framework testing. Scaffold menggunakan test runner bawaan Node (`node:test`) untuk tes cepat tanpa dependensi tambahan.
+
+## Menjalankan tests
+
+```bash
+npm test
+```
+
+Script default menjalankan:
+
+```bash
+node --test
+```
+
+## Contoh unit test
+
+```js title="tests/project.test.js"
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const pkg = require('../package.json');
+
+test('package metadata is initialised', () => {
+  assert.ok(pkg.name);
+  assert.ok(pkg.version);
+});
+```
+
+## Integration tests
+
+Jalankan app melalui `createApp()` dan uji routes dengan HTTP client seperti `supertest`:
+
+```js
+const request = require('supertest');
+const { createApp } = require('../app/Bootstrap/server.bootstrap');
+
+test('GET /status returns ok', async () => {
+  const { app } = createApp();
+  const response = await request(app).get('/status');
+  assert.equal(response.statusCode, 200);
+});
+```
+
+:::note Dependencies
+`supertest` tidak termasuk secara default. Instal saat Anda butuh integration tests.
+:::

@@ -1,0 +1,33 @@
+---
+title: 'Design Philosophy'
+description: 'The principles that shape Flowra: explicit structure, dependency injection, and pragmatic defaults that stay close to Express.'
+---
+
+Flowra is opinionated on purpose. It aims to make the "right" path the easy path for teams building production APIs, without hiding the underlying Express ecosystem.
+
+## Principles that guide the framework
+
+### Explicit structure over magic
+Flowra favors predictable file placement and explicit wiring. Modules are registered in `modules.manifest.js`, routes are attached from module files, and all dependencies resolve through the container. That means onboarding a new teammate is as simple as opening `app/Modules` and tracing the flow.
+
+### Dependency injection, not global state
+Controllers and services receive their dependencies from the container. This makes testing simple and avoids hidden singletons. If you can resolve it from the container, you can mock it.
+
+### Batteries included, batteries optional
+Flowra ships with logging, request context, error handling, database management, caching, and queue stubs. You can use them as-is, or swap in your own components. Express remains fully accessible.
+
+### Modular boundaries scale teams
+Each module is a feature slice. It bundles routes, controllers, services, models, and queries. This creates a shared vocabulary across teams and keeps APIs consistent as the codebase grows.
+
+## Staying close to Express
+Flowra is still Express under the hood. That means:
+
+- Custom middleware works the same way you expect.
+- You can use any Express-compatible library.
+- Performance and debugging stay familiar.
+
+:::note Philosophy in practice
+The Flowra CLI is not just a generator. It encodes the conventions that keep code consistent across teams.
+:::
+
+Flowra is designed to help you scale architecture without losing developer velocity. Structure gives you speed; Flowra makes structure the default.

@@ -1,0 +1,73 @@
+---
+title: Contributing
+description: How to contribute to Flowra CLI, framework, and documentation.
+---
+
+Thank you for helping improve Flowra. Contributions are welcome across the CLI, framework, and docs.
+
+## Ways to contribute
+
+- Report bugs or request features with clear reproduction steps.
+- Improve documentation by adding examples, clarifying wording, or fixing typos.
+- Build new CLI generators or framework modules that help teams ship faster.
+- Share templates, snippets, or recipes that make Flowra easier to adopt.
+
+## Repository map
+
+- `docs/` holds the documentation content.
+- `src/` holds the docs site UI components and styles.
+- `static/` holds images and assets.
+- The Flowra CLI and framework live in the main repo and are linked from the docs.
+
+## Local setup (docs)
+
+1. Install dependencies.
+
+```bash
+npm install
+```
+
+2. Run the docs site in dev mode.
+
+```bash
+npm run start
+```
+
+3. Build the production site before opening a PR.
+
+```bash
+npm run build
+```
+
+## Contribution workflow
+
+1. Fork the repository and create a branch from `main`.
+2. Make focused changes that solve a single problem.
+3. Run the build and verify there are no errors.
+4. Open a PR and describe the change, screenshots, and tests.
+
+## Documentation standards
+
+- Use clear, action-first headings.
+- Prefer runnable code examples and full commands.
+- Keep steps numbered and avoid long nested lists.
+- Add or update Indonesian translations for user-facing docs.
+
+## Pull request checklist
+
+- Changes are scoped to one goal.
+- `npm run build` succeeds locally.
+- New docs have working links.
+- Screenshots included for visual changes.
+- Translations updated when content is user-facing.
+
+## Help us review faster
+
+If you are changing the CLI or framework, link to the related issue and describe how the change affects:
+
+- project scaffolding
+- module structure
+- CLI output or flags
+- configuration or environment variables
+
+We appreciate every contribution, from typo fixes to major new capabilities.

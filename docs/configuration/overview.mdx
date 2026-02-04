@@ -1,0 +1,44 @@
+---
+title: 'Configuration Overview'
+description: 'Understand how Flowra loads configuration and where to define settings.'
+---
+
+Flowra configuration is file-based and environment-driven. Runtime settings live in `app/Config` and are loaded through the `config()` helper.
+
+## How config works
+
+`core/Support/config.js` reads JavaScript files inside `app/Config` and exposes them via a simple API:
+
+```js
+const config = require('./core/Support/config');
+
+const port = config('app.port');
+const database = config('database');
+const all = config.all();
+```
+
+Config keys follow a `namespace.key` pattern. The namespace maps to a file in `app/Config`.
+
+## Default config files
+
+- `app/Config/App.js` - app settings, HTTP options, providers
+- `app/Config/Database.js` - Knex connections and pools
+- `app/Config/Cache.js` - cache stores and defaults
+- `app/Config/Logger.js` - logging output and transport settings
+- `app/Config/Model.js` - base model behavior
+- `app/Config/Service.js` - base service helpers and database access
+- `app/Config/Validation.js` - request validation rules
+
+## Environment variables
+
+Most config values are derived from `.env`. Use the CLI to generate a fresh example:
+
+```bash
+flowra env:example
+```
+
+See [Environment Variables](./environment) for the full list.
+
+:::tip Keep config close to the app
+Because config is file-based, teams can audit changes easily and review production settings in code.
+:::

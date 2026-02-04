@@ -1,0 +1,78 @@
+{
+  "link.title.Get Started": {
+    "message": "Mulai",
+    "description": "The title of the footer links column with title=Get Started in the footer"
+  },
+  "link.title.Framework": {
+    "message": "Framework",
+    "description": "The title of the footer links column with title=Framework in the footer"
+  },
+  "link.title.Release": {
+    "message": "Rilis",
+    "description": "The title of the footer links column with title=Release in the footer"
+  },
+  "link.title.Community": {
+    "message": "Komunitas",
+    "description": "The title of the footer links column with title=Community in the footer"
+  },
+  "link.item.label.Installation": {
+    "message": "Instalasi",
+    "description": "The label of footer link with label=Installation linking to /docs/getting-started/installation"
+  },
+  "link.item.label.First API": {
+    "message": "API Pertama",
+    "description": "The label of footer link with label=First API linking to /docs/getting-started/first-api"
+  },
+  "link.item.label.CLI Commands": {
+    "message": "Perintah CLI",
+    "description": "The label of footer link with label=CLI Commands linking to /docs/cli/commands"
+  },
+  "link.item.label.Modules": {
+    "message": "Modules",
+    "description": "The label of footer link with label=Modules linking to /docs/architecture/modules"
+  },
+  "link.item.label.Service Container": {
+    "message": "Service Container",
+    "description": "The label of footer link with label=Service Container linking to /docs/architecture/service-container"
+  },
+  "link.item.label.Data Layer": {
+    "message": "Lapisan Data",
+    "description": "The label of footer link with label=Data Layer linking to /docs/data/knex-configuration"
+  },
+  "link.item.label.Versioning": {
+    "message": "Versioning",
+    "description": "The label of footer link with label=Versioning linking to /docs/release/overview"
+  },
+  "link.item.label.Upgrade Guide": {
+    "message": "Panduan Upgrade",
+    "description": "The label of footer link with label=Upgrade Guide linking to /docs/release/upgrade-guide"
+  },
+  "link.item.label.Changelog": {
+    "message": "Changelog",
+    "description": "The label of footer link with label=Changelog linking to /docs/release/changelog"
+  },
+  "link.item.label.GitHub Issues": {
+    "message": "GitHub Issues",
+    "description": "The label of footer link with label=GitHub Issues linking to https://github.com/ecowangsa/flowra-cli/issues"
+  },
+  "link.item.label.Contributing": {
+    "message": "Kontribusi",
+    "description": "The label of footer link with label=Contributing linking to /docs/community/contributing"
+  },
+  "link.item.label.Code of Conduct": {
+    "message": "Kode Etik",
+    "description": "The label of footer link with label=Code of Conduct linking to /docs/community/code-of-conduct"
+  },
+  "link.item.label.Discussions": {
+    "message": "Diskusi",
+    "description": "The label of footer link with label=Discussions linking to https://github.com/ecowangsa/flowra-cli/discussions"
+  },
+  "link.item.label.Security": {
+    "message": "Keamanan",
+    "description": "The label of footer link with label=Security linking to /docs/security/overview"
+  },
+  "copyright": {
+    "message": "© 2026 Flowra Team, Lisensi MIT",
+    "description": "The footer copyright"
+  }
+}

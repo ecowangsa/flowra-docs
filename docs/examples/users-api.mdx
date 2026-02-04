@@ -1,0 +1,93 @@
+---
+title: 'Example: Users API'
+description: 'Extend the scaffolded Users module into a simple CRUD API.'
+---
+
+This example builds on the default Users module that ships with new Flowra projects.
+
+## 1. Run the migration
+
+The scaffold includes a migration for the `users` table.
+
+```bash
+flowra db:migrate:latest
+```
+
+## 2. Update routes
+
+Switch the Users routes to a more RESTful shape:
+
+```js title="app/Modules/Users/users.routes.js"
+'use strict';
+const group = require('routergroup');
+
+module.exports = ({ router, container } = {}) => {
+  if (!router || !container) {
+    return router;
+  }
+
+  const controller = container.resolve('modules.users.controllers.main');
+
+  router.use(
+    group('/users', (router) => {
+      router.get('/', controller.list.bind(controller));
+      router.post('/', controller.create.bind(controller));
+      router.put('/:id', controller.update.bind(controller));
+      router.delete('/:id', controller.destroy.bind(controller));
+    })
+  );
+
+  return router;
+};
+```
+
+## 3. Add update and delete logic
+
+Extend the controller and service with `update` and `destroy` methods.
+
+```js title="app/Modules/Users/Users.controller.js"
+update = async (req, res, next) => {
+  try {
+    const result = await this.usersService.update(req.params.id, req.body);
+    res.json({ message: 'Updated', data: result });
+  } catch (error) {
+    next(error);
+  }
+};
+
+destroy = async (req, res, next) => {
+  try {
+    await this.usersService.destroy(req.params.id);
+    res.status(204).end();
+  } catch (error) {
+    next(error);
+  }
+};
+```
+
+```js title="app/Modules/Users/Users.service.js"
+async update(id, payload) {
+  return this.userModel.update(id, payload);
+}
+
+async destroy(id) {
+  return this.userModel.delete(id);
+}
+```
+
+## 4. Run and test
+
+```bash
+npm run dev
+```
+
+Now you can call:
+
+- `GET /users`
+- `POST /users`
+- `PUT /users/:id`
+- `DELETE /users/:id`
+
+:::tip Next steps
+Try adding validation rules to `update()` or introduce a query class for reporting.
+:::

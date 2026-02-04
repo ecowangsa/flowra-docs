@@ -1,0 +1,39 @@
+---
+title: 'Ringkasan CLI'
+description: 'Flowra CLI menangani pembuatan proyek, scaffolding, dan perintah operasional.'
+---
+
+Flowra CLI tersedia sebagai executable `flowra`. CLI ini melakukan scaffolding proyek, mengelola modul, dan membungkus tugas operasional seperti migrasi dan health check.
+
+## Instal dan jalankan
+
+```bash
+npm install -g flowra-cli
+flowra --help
+```
+
+Jika terpasang lokal:
+
+```bash
+npm install --save-dev flowra-cli
+npx flowra --help
+```
+
+## Deteksi proyek
+
+Semua command kecuali `create-app` dan `list` harus dijalankan di dalam proyek Flowra. CLI mendeteksi proyek ketika `package.json` berisi `flowra` atau `flowra-cli` di dependencies.
+
+## Command yang sering dipakai
+
+```bash
+flowra list
+flowra serve
+flowra serve:watch
+flowra route:list
+flowra module:list
+flowra health:check
+```
+
+:::tip Butuh detail?
+Jalankan `flowra <command> --help` untuk opsi command spesifik.
+:::

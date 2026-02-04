@@ -1,0 +1,69 @@
+---
+title: 'Modules'
+description: 'Modules adalah blok utama di Flowra. Mereka mengemas routes, controllers, services, dan models.'
+---
+
+Modules adalah slice fitur. Setiap modul dapat memiliki routes, controllers, services, models, dan queries sendiri. Flowra menemukan modul dari manifest dan mendaftarkannya ke container.
+
+## Module manifest
+
+`app/Modules/modules.manifest.js` mengatur modul yang dimuat:
+
+```js title="app/Modules/modules.manifest.js"
+module.exports = {
+  modules: [
+    {
+      name: 'users',
+      path: './Users/users.module.js',
+      enabled: true,
+      description: 'Sample user management module.',
+    },
+  ],
+};
+```
+
+Nonaktifkan modul dengan `enabled: false` atau CLI:
+
+```bash
+flowra module:disable users
+```
+
+## Definisi modul
+
+Setiap modul mengekspor object dengan nama, register function, dan routes:
+
+```js title="app/Modules/Users/users.module.js"
+'use strict';
+
+const registerContainer = require('./users.container');
+const registerRoutes = require('./users.routes');
+
+module.exports = {
+  name: 'users',
+  register: registerContainer,
+  routes: registerRoutes,
+  aliases: {},
+};
+```
+
+## Layout modul standar
+
+```text
+app/Modules/Users/
+├─ Users.controller.js
+├─ Users.model.js
+├─ Users.service.js
+├─ users.container.js
+├─ users.module.js
+└─ users.routes.js
+```
+
+## CLI helpers
+
+- `flowra module:list` menampilkan status modul.
+- `flowra module:enable <name>` mengaktifkan modul.
+- `flowra module:disable <name>` menonaktifkan modul.
+
+:::tip Penamaan
+Flowra menormalisasi nama modul ke kebab-case di manifest. Nama direktori default menggunakan PascalCase.
+:::

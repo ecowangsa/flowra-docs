@@ -1,0 +1,87 @@
+---
+title: 'Instalasi & Setup'
+description: 'Instal Flowra CLI, buat proyek baru, dan jalankan server development.'
+---
+
+Panduan ini membahas instalasi Flowra, pembuatan proyek, dan menjalankan server dev.
+
+## Kebutuhan
+
+| Kebutuhan | Catatan |
+| --- | --- |
+| Node.js | 18+ (LTS direkomendasikan) |
+| Manajer paket | npm, yarn, atau pnpm |
+| Database | MySQL secara default (bisa diubah di konfigurasi) |
+
+## Instal CLI
+
+Instal global:
+
+```bash
+npm install -g flowra-cli
+```
+
+Instal lokal proyek (direkomendasikan untuk tim dan CI):
+
+```bash
+npm install --save-dev flowra-cli
+```
+
+Jika terpasang lokal, jalankan dengan `npx flowra`.
+
+## Buat proyek
+
+```bash
+flowra create-app my-flowra-app
+```
+
+Anda bisa override versi framework yang ditulis di `package.json`:
+
+```bash
+flowra create-app my-flowra-app --framework-version 1.0.0
+```
+
+## Instal dependensi dan jalankan
+
+```bash
+cd my-flowra-app
+npm install
+npm run dev
+```
+
+`dev` menggunakan `flowra serve:watch` (hot reload). Untuk menjalankan mode produksi:
+
+```bash
+npm start
+```
+
+## Konfigurasi variabel environment
+
+Salin file environment default:
+
+```bash
+cp .env.example .env
+```
+
+Scaffold menyertakan default MySQL. Sesuaikan nilai ini dengan database Anda:
+
+- `DB_MYSQL_HOST_PRIMARY`
+- `DB_MYSQL_PORT_PRIMARY`
+- `DB_DEFAULT_USERNAME`
+- `DB_DEFAULT_PASSWORD`
+- `DB_DEFAULT_DATABASE`
+
+Jika ingin memakai database lain, sesuaikan `app/Config/Database.js`.
+
+## Pemeriksaan awal
+
+Tampilkan daftar `route` dan cek koneksi database:
+
+```bash
+flowra route:list
+flowra health:check
+```
+
+:::tip Langkah berikutnya
+Lanjutkan ke [Struktur Proyek](./project-structure) untuk memahami layout, atau buat [API Pertama](./first-api).
+:::

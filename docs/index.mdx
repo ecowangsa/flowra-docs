@@ -1,0 +1,118 @@
+---
+title: Documentation
+description: Flowra documentation for the CLI, framework architecture, and real-world examples.
+sidebar_position: 1
+---
+
+import Link from '@docusaurus/Link';
+
+<div className="flowra-docs-hero">
+  <div className="flowra-docs-hero-content">
+    <div className="flowra-docs-pill">Flowra v1.0.3</div>
+    <h1>Flowra adds structure to Node.js services</h1>
+    <p>
+      The Flowra docs cover the CLI, the modular Express framework, and runnable examples so you
+      can trace the request flow end to end.
+    </p>
+    <div className="flowra-docs-hero-actions">
+      <Link className="button button--primary button--lg" to="/docs/getting-started/installation">
+        Get started
+      </Link>
+      <Link className="button button--secondary button--lg" to="/docs/cli/overview">
+        CLI overview
+      </Link>
+    </div>
+    <div className="flowra-docs-hero-meta">
+      <span className="flowra-docs-meta-badge">Node.js 18+</span>
+      <span className="flowra-docs-meta-badge">Express</span>
+      <span className="flowra-docs-meta-badge">Knex</span>
+      <span className="flowra-docs-meta-badge">Awilix</span>
+    </div>
+  </div>
+  <div className="flowra-docs-hero-panel">
+    <div className="flowra-docs-panel-title">Start here</div>
+    <ol className="flowra-docs-panel-list">
+      <li>
+        <Link to="/docs/getting-started/installation">Install Flowra CLI</Link>
+      </li>
+      <li>
+        <Link to="/docs/getting-started/first-api">Build your first API</Link>
+      </li>
+      <li>
+        <Link to="/docs/examples/users-api">Explore the users API example</Link>
+      </li>
+    </ol>
+  </div>
+</div>
+
+<section className="flowra-docs-section">
+  <div className="flowra-docs-section-header">
+    <h2>Choose your track</h2>
+    <p>Pick the area you want to focus on today.</p>
+  </div>
+  <div className="flowra-docs-grid">
+    <div className="flowra-docs-card">
+      <div className="flowra-docs-card-title">CLI</div>
+      <p>Generate modules, manage migrations, and keep every project aligned.</p>
+      <Link to="/docs/cli/commands">Explore CLI commands</Link>
+    </div>
+    <div className="flowra-docs-card">
+      <div className="flowra-docs-card-title">Framework</div>
+      <p>Understand modules, the container, and the request lifecycle from end to end.</p>
+      <Link to="/docs/architecture/request-lifecycle">Dive into architecture</Link>
+    </div>
+    <div className="flowra-docs-card">
+      <div className="flowra-docs-card-title">Examples</div>
+      <p>See real routes, services, and data flows in a full example API.</p>
+      <Link to="/docs/examples/users-api">Open the users API</Link>
+    </div>
+  </div>
+</section>
+
+<section className="flowra-docs-section flowra-docs-section-alt">
+  <div className="flowra-docs-section-header">
+    <h2>What you will learn</h2>
+    <p>The core workflows that keep Flowra predictable as teams grow.</p>
+  </div>
+  <ul className="flowra-docs-list">
+    <li>How Flowra resolves dependencies and wires modules into Express.</li>
+    <li>How to design modules with controllers, services, and models.</li>
+    <li>How to configure environments, data sources, and logging.</li>
+    <li>How to test and roll out upgrades safely.</li>
+  </ul>
+</section>
+
+<section className="flowra-docs-section">
+  <div className="flowra-docs-section-header">
+    <h2>Popular docs</h2>
+    <p>Quick links to the pages teams visit the most.</p>
+  </div>
+  <div className="flowra-docs-grid flowra-docs-grid-small">
+    <div className="flowra-docs-card">
+      <div className="flowra-docs-card-title">Project structure</div>
+      <Link to="/docs/getting-started/project-structure">See the Flowra layout</Link>
+    </div>
+    <div className="flowra-docs-card">
+      <div className="flowra-docs-card-title">Service container</div>
+      <Link to="/docs/architecture/service-container">Review dependency resolution</Link>
+    </div>
+    <div className="flowra-docs-card">
+      <div className="flowra-docs-card-title">Environment config</div>
+      <Link to="/docs/configuration/environment">Configure environments</Link>
+    </div>
+    <div className="flowra-docs-card">
+      <div className="flowra-docs-card-title">Release guide</div>
+      <Link to="/docs/release/upgrade-guide">Upgrade Flowra safely</Link>
+    </div>
+  </div>
+</section>
+
+<section className="flowra-docs-cta">
+  <div>
+    <h2>Ready to contribute?</h2>
+    <p>Help improve the framework, CLI, or documentation by following the contribution guide.</p>
+  </div>
+  <Link className="button button--secondary button--lg" to="/docs/community/contributing">
+    Contributing guide
+  </Link>
+</section>

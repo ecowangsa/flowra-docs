@@ -1,0 +1,41 @@
+---
+title: 'Request Lifecycle'
+description: 'Follow a request from the Flowra CLI through the container, middleware, and module routes.'
+---
+
+Every Flowra request follows the same pipeline, which keeps behavior consistent and easy to reason about.
+
+## Startup flow
+
+1. `flowra serve` loads `app/Bootstrap/server.bootstrap.js`.
+2. `buildContainer()` composes the container by calling:
+   - `registerCore()` (config, logger, validation)
+   - `registerInfrastructure()` (database, cache, queue, mailer)
+   - `registerModules()` (module scopes and routes)
+3. Express is configured with middleware (helmet, compression, parsers, static files).
+4. Module routes are registered via `app/Http/http.router.js`.
+5. Not-found and error handlers are attached.
+6. Providers listed in `app/Config/App.js` are loaded.
+
+## Per-request flow
+
+```text
+Incoming request
+  -> RequestContextMiddleware (request ID, logger, timing)
+  -> CORS + Morgan logging
+  -> Module routes
+  -> Controller -> Service -> Model/Query
+  -> Response
+  -> ErrorHandler (if an exception occurs)
+```
+
+## Key files
+
+- `app/Bootstrap/server.bootstrap.js` - Express setup and middleware.
+- `app/Bootstrap/Container/compose.js` - Container composition.
+- `app/Http/http.router.js` - Route registration across modules.
+- `app/Http/Middleware/ErrorHandler.js` - Consistent JSON error responses.
+
+:::note Provider hook
+Providers are a convenient place to register app-wide listeners or boot tasks. Add them in `app/Config/App.js`.
+:::

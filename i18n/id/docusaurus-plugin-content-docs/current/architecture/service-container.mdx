@@ -1,0 +1,55 @@
+---
+title: 'Service Container'
+description: 'Flowra me-resolve dependency melalui container dengan scoped module registrations.'
+---
+
+Flowra menggunakan container ringan yang mendukung function, value, dan resolver gaya Awilix. Ini menjaga dependency resolution tetap eksplisit dan mudah dites.
+
+## Cara kerja
+
+- `container.register(name, factory)` mendaftarkan dependency.
+- Dependency **singleton secara default** kecuali diubah.
+- `container.createScope(prefix)` membuat scope bernama untuk modul.
+- Scope bisa mendaftarkan objek bertingkat, lalu diakses sebagai dot-notation keys.
+
+## Scope modul
+
+Modul didaftarkan di namespace `modules.<name>`. Contoh modul Users:
+
+```js title="app/Modules/Users/users.container.js"
+const { asClass, asValue } = require('awilix');
+const UsersService = require('./Users.service');
+const UsersController = require('./Users.controller');
+const registerUsersRoutes = require('./users.routes');
+
+module.exports = (scope) => {
+  scope.register({
+    services: {
+      main: asClass(UsersService).singleton(),
+    },
+    controllers: {
+      main: asClass(UsersController).singleton(),
+    },
+    routes: asValue(registerUsersRoutes),
+  });
+
+  scope.registerAlias('usersController', 'controllers.main');
+};
+```
+
+Container mengekspose ini dengan dot notation:
+
+```js
+const controller = container.resolve('modules.users.controllers.main');
+```
+
+## Highlight API container
+
+- `register()` menerima string + factory atau objek bertingkat.
+- `resolve()` akan error jika dependency tidak ditemukan.
+- `createScope()` membuat accessor grup seperti `modules.users.services`.
+- `cradle` menyediakan proxy yang nyaman untuk dependency yang sudah di-resolve.
+
+:::tip Testing
+Karena dependency eksplisit, Anda bisa mengganti implementasi dengan mock di scope test.
+:::

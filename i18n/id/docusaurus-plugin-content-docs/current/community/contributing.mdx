@@ -1,0 +1,73 @@
+---
+title: Kontribusi
+description: Cara berkontribusi ke Flowra CLI, framework, dan dokumentasi.
+---
+
+Terima kasih telah membantu meningkatkan Flowra. Kontribusi terbuka untuk CLI, framework, dan dokumentasi.
+
+## Cara berkontribusi
+
+- Laporkan bug atau ajukan fitur dengan langkah reproduksi yang jelas.
+- Tingkatkan dokumentasi dengan menambah contoh, memperjelas tulisan, atau memperbaiki typo.
+- Bangun generator CLI atau modul framework baru agar tim lebih cepat mengirim layanan.
+- Bagikan template, snippet, atau resep praktis untuk memudahkan adopsi Flowra.
+
+## Peta repositori
+
+- `docs/` menyimpan konten dokumentasi.
+- `src/` menyimpan komponen UI dan style situs docs.
+- `static/` menyimpan gambar dan aset.
+- Flowra CLI dan framework berada di repo utama dan ditautkan dari dokumentasi.
+
+## Setup lokal (docs)
+
+1. Instal dependencies.
+
+```bash
+npm install
+```
+
+2. Jalankan situs docs pada mode dev.
+
+```bash
+npm run start
+```
+
+3. Build situs produksi sebelum membuka PR.
+
+```bash
+npm run build
+```
+
+## Alur kontribusi
+
+1. Fork repository dan buat branch dari `main`.
+2. Buat perubahan yang fokus pada satu masalah.
+3. Jalankan build dan pastikan tidak ada error.
+4. Buka PR dan jelaskan perubahan, screenshot, dan tes.
+
+## Standar dokumentasi
+
+- Gunakan heading yang jelas dan berorientasi aksi.
+- Utamakan contoh kode dan perintah yang bisa dijalankan.
+- Gunakan langkah bernomor dan hindari daftar bertingkat panjang.
+- Tambahkan atau perbarui terjemahan Indonesia untuk konten yang terlihat pengguna.
+
+## Checklist pull request
+
+- Perubahan fokus pada satu tujuan.
+- `npm run build` sukses secara lokal.
+- Dokumen baru memiliki tautan yang valid.
+- Screenshot disertakan untuk perubahan visual.
+- Terjemahan diperbarui jika kontennya ditampilkan ke pengguna.
+
+## Agar review lebih cepat
+
+Jika Anda mengubah CLI atau framework, sertakan issue terkait dan jelaskan dampaknya terhadap:
+
+- scaffolding proyek
+- struktur modul
+- output atau flag CLI
+- konfigurasi atau environment variables
+
+Kami menghargai setiap kontribusi, dari perbaikan typo hingga fitur besar.

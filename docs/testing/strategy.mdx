@@ -1,0 +1,50 @@
+---
+title: 'Testing Strategy'
+description: 'Use Node’s built-in test runner and Flowra’s modular structure to test services and routes.'
+---
+
+Flowra does not impose a testing framework. The scaffold uses Node’s built-in test runner (`node:test`) for fast, dependency-free tests.
+
+## Running tests
+
+```bash
+npm test
+```
+
+The default script runs:
+
+```bash
+node --test
+```
+
+## Example unit test
+
+```js title="tests/project.test.js"
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const pkg = require('../package.json');
+
+test('package metadata is initialised', () => {
+  assert.ok(pkg.name);
+  assert.ok(pkg.version);
+});
+```
+
+## Integration tests
+
+Spin up the app via `createApp()` and test routes with a HTTP client like `supertest`:
+
+```js
+const request = require('supertest');
+const { createApp } = require('../app/Bootstrap/server.bootstrap');
+
+test('GET /status returns ok', async () => {
+  const { app } = createApp();
+  const response = await request(app).get('/status');
+  assert.equal(response.statusCode, 200);
+});
+```
+
+:::note Dependencies
+`supertest` is not included by default. Install it when you need integration tests.
+:::

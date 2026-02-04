@@ -1,0 +1,45 @@
+---
+title: 'Security Overview'
+description: 'Flowra ships with secure defaults and hooks for adding your own security layers.'
+---
+
+Flowra aims to be secure by default while keeping Express flexibility.
+
+## Built-in protections
+
+- **Helmet** for common HTTP header protections.
+- **CORS** configuration in `app/Config/App.js`.
+- **Request IDs** via `RequestContextMiddleware` for traceability.
+- **Centralized error handling** with sanitized JSON responses.
+
+## Configure CORS
+
+CORS is enabled by default and controlled by `app/Config/App.js`:
+
+```js title="app/Config/App.js"
+http: {
+  cors: {
+    enabled: true,
+    origin: process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',') : ['*'],
+    credentials: true,
+  },
+}
+```
+
+## Add rate limiting
+
+The scaffold includes a `rateLimit` config section but does not wire it by default. You can add `express-rate-limit` in `app/Bootstrap/server.bootstrap.js` if needed.
+
+## Sessions and cookies
+
+Flowra includes `cookie-parser`. Add `express-session` or a JWT strategy depending on your requirements.
+
+## Operational hygiene
+
+- Use `flowra env:check` to verify required environment variables.
+- Keep `.env` files out of source control.
+- Rotate secrets regularly and prefer a secrets manager in production.
+
+:::tip Security is layered
+Flowra provides the foundation; add authentication, authorization, and threat monitoring according to your use case.
+:::

@@ -1,0 +1,59 @@
+---
+title: 'Deployment Guide'
+description: 'Deploy Flowra in production with the right environment variables and process management.'
+---
+
+Flowra is a standard Node.js service. Deployment focuses on environment configuration, process management, and observability.
+
+## Build and run
+
+Install dependencies and start the server:
+
+```bash
+npm install
+npm start
+```
+
+`npm start` runs `flowra serve` which initializes the container, registers modules, and starts Express.
+
+## Environment variables
+
+Set your production environment:
+
+```bash
+APP_ENV=production
+APP_DEBUG=false
+LOG_LEVEL=info
+```
+
+Configure database and cache as needed. Use `.env` or your platform's secret manager.
+
+## Health checks
+
+Use the CLI to validate database connectivity:
+
+```bash
+flowra health:check --json
+```
+
+For lightweight readiness checks, `flowra serve --once` starts and exits after the server is ready.
+
+## Process managers
+
+Flowra runs well under:
+
+- systemd
+- PM2
+- Docker
+- Kubernetes
+
+Just ensure the Node process is restarted on failure and logs are collected.
+
+## Static assets and views
+
+- `public/` is served as static assets.
+- `resources/views/` contains EJS templates.
+
+:::tip Production logs
+Enable file logging in `app/Config/Logger.js` to persist logs in `storage/logs`.
+:::

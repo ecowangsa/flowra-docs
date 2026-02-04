@@ -1,0 +1,70 @@
+---
+title: 'Project Structure'
+description: 'Learn how a Flowra application is organized and where to place your code.'
+---
+
+Flowra uses a predictable layout so every project feels familiar. The scaffold separates framework infrastructure from application modules and keeps all core touchpoints easy to find.
+
+## Directory overview
+
+```text
+my-flowra-app/
+├─ app/
+│  ├─ Bootstrap/
+│  │  └─ Container/
+│  ├─ Config/
+│  ├─ Database/
+│  ├─ Errors/
+│  ├─ Http/
+│  │  └─ Middleware/
+│  ├─ Infrastructure/
+│  └─ Modules/
+│     └─ modules.manifest.js
+├─ core/
+│  ├─ Services/
+│  └─ Support/
+├─ main/
+│  └─ app.js
+├─ public/
+├─ resources/
+│  └─ views/
+├─ tests/
+├─ .env.example
+├─ orm.cli.config.js
+└─ package.json
+```
+
+## Key folders
+
+- **`app/Modules/`**: Feature modules (routes, controllers, services, models).
+- **`app/Bootstrap/`**: Server startup and container composition.
+- **`app/Config/`**: Environment-backed configuration for app, DB, cache, and logging.
+- **`app/Http/`**: Routing layer and middleware.
+- **`app/Infrastructure/`**: Database and cache managers.
+- **`core/`**: Framework helpers (config loader, optional dependency loader, logger).
+- **`main/app.js`**: Application entry point.
+- **`resources/`**: View templates (EJS by default).
+
+## Module anatomy
+
+A generated module looks like this:
+
+```text
+app/Modules/Users/
+├─ Users.controller.js
+├─ Users.model.js
+├─ Users.service.js
+├─ users.container.js
+├─ users.module.js
+└─ users.routes.js
+```
+
+- **`users.module.js`** wires the module to the container and routes.
+- **`users.container.js`** registers controllers, services, models, and aliases.
+- **`users.routes.js`** attaches Express routes.
+- **`Users.service.js`** contains domain logic.
+- **`Users.model.js`** wraps database operations.
+
+:::tip Keep modules self-contained
+When a feature grows, keep its logic inside the module instead of spreading across shared folders.
+:::

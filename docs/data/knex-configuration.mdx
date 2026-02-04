@@ -1,0 +1,54 @@
+---
+title: 'Database Configuration'
+description: 'Configure Knex connections and database aliases in Flowra.'
+---
+
+Flowra uses Knex under the hood. Database configuration lives in `app/Config/Database.js` and is consumed by the `DatabaseManager`.
+
+## Default configuration
+
+```js title="app/Config/Database.js"
+module.exports = {
+  default: 'default',
+  connections: {
+    default: {
+      client: 'mysql2',
+      connection: {
+        host: process.env.DB_MYSQL_HOST_PRIMARY || process.env.DB_MYSQL_HOST || '127.0.0.1',
+        user: process.env.DB_DEFAULT_USERNAME || 'root',
+        password: process.env.DB_DEFAULT_PASSWORD || '',
+        database: process.env.DB_DEFAULT_DATABASE || 'flowra',
+        port: parseInt(process.env.DB_MYSQL_PORT_PRIMARY || process.env.DB_MYSQL_PORT, 10),
+      },
+    },
+    defaultRead: {
+      client: 'mysql2',
+      connection: {
+        host: process.env.DB_MYSQL_HOST_READONLY || process.env.DB_MYSQL_HOST || '127.0.0.1',
+        user: process.env.DB_DEFAULT_USERNAME || 'root',
+        password: process.env.DB_DEFAULT_PASSWORD || '',
+        database: process.env.DB_DEFAULT_DATABASE || 'flowra',
+      },
+    },
+  },
+};
+```
+
+## Connection aliases
+
+- `default` is the primary connection.
+- `defaultRead` is used for read operations when available.
+
+Services and models can choose the connection alias via the `Service` base class.
+
+## CLI configuration
+
+`orm.cli.config.js` reads your database config and maps it to Knex CLI commands. You can override connection names with environment variables like `KNEX_CONNECTION`.
+
+## Switching databases
+
+To use PostgreSQL or another database, update the connection `client` and `connection` values in `app/Config/Database.js`. Everything else in Flowra remains the same.
+
+:::tip Keep config in one place
+Flowra reads from `app/Config/Database.js` for runtime and from `orm.cli.config.js` for CLI migrations, so you only maintain one source of truth.
+:::

@@ -1,0 +1,45 @@
+---
+title: 'Ringkasan Security'
+description: 'Flowra membawa default yang aman dan hook untuk menambah layer keamanan Anda.'
+---
+
+Flowra berupaya aman secara default sambil tetap fleksibel seperti Express.
+
+## Proteksi bawaan
+
+- **Helmet** untuk header protection umum.
+- **CORS** yang dikonfigurasi di `app/Config/App.js`.
+- **Request IDs** melalui `RequestContextMiddleware` untuk traceability.
+- **Centralized error handling** dengan response JSON yang tersanitasi.
+
+## Konfigurasi CORS
+
+CORS aktif secara default dan diatur di `app/Config/App.js`:
+
+```js title="app/Config/App.js"
+http: {
+  cors: {
+    enabled: true,
+    origin: process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',') : ['*'],
+    credentials: true,
+  },
+}
+```
+
+## Tambahkan rate limiting
+
+Scaffold menyertakan bagian config `rateLimit` tetapi belum terhubung secara default. Anda bisa menambahkan `express-rate-limit` di `app/Bootstrap/server.bootstrap.js` jika diperlukan.
+
+## Session dan cookies
+
+Flowra sudah membawa `cookie-parser`. Tambahkan `express-session` atau JWT sesuai kebutuhan.
+
+## Hygiene operasional
+
+- Gunakan `flowra env:check` untuk memastikan environment variables wajib.
+- Jangan commit file `.env` ke repo.
+- Rotasi secret secara berkala dan gunakan secrets manager di produksi.
+
+:::tip Security berlapis
+Flowra memberi fondasi; tambahkan autentikasi, otorisasi, dan monitoring sesuai kebutuhan.
+:::

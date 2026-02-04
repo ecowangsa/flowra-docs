@@ -1,0 +1,50 @@
+{
+  "version.label": {
+    "message": "Terbaru",
+    "description": "The label for version current"
+  },
+  "sidebar.docsSidebar.category.Overview": {
+    "message": "Ringkasan",
+    "description": "The label for category 'Overview' in sidebar 'docsSidebar'"
+  },
+  "sidebar.docsSidebar.category.Getting Started": {
+    "message": "Mulai",
+    "description": "The label for category 'Getting Started' in sidebar 'docsSidebar'"
+  },
+  "sidebar.docsSidebar.category.Configuration": {
+    "message": "Konfigurasi",
+    "description": "The label for category 'Configuration' in sidebar 'docsSidebar'"
+  },
+  "sidebar.docsSidebar.category.Core Concepts": {
+    "message": "Konsep Inti",
+    "description": "The label for category 'Core Concepts' in sidebar 'docsSidebar'"
+  },
+  "sidebar.docsSidebar.category.HTTP & Routing": {
+    "message": "HTTP & Routing",
+    "description": "The label for category 'HTTP & Routing' in sidebar 'docsSidebar'"
+  },
+  "sidebar.docsSidebar.category.Data Layer": {
+    "message": "Lapisan Data",
+    "description": "The label for category 'Data Layer' in sidebar 'docsSidebar'"
+  },
+  "sidebar.docsSidebar.category.CLI": {
+    "message": "CLI",
+    "description": "The label for category 'CLI' in sidebar 'docsSidebar'"
+  },
+  "sidebar.docsSidebar.category.Guides": {
+    "message": "Panduan",
+    "description": "The label for category 'Guides' in sidebar 'docsSidebar'"
+  },
+  "sidebar.docsSidebar.category.Examples": {
+    "message": "Contoh",
+    "description": "The label for category 'Examples' in sidebar 'docsSidebar'"
+  },
+  "sidebar.docsSidebar.category.Community": {
+    "message": "Komunitas",
+    "description": "The label for category 'Community' in sidebar 'docsSidebar'"
+  },
+  "sidebar.docsSidebar.category.Release & Support": {
+    "message": "Rilis & Dukungan",
+    "description": "The label for category 'Release & Support' in sidebar 'docsSidebar'"
+  }
+}

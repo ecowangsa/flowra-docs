@@ -1,0 +1,82 @@
+---
+title: 'Workflow Scaffolding'
+description: 'Pahami apa yang dibuat setiap generator Flowra dan cara menyesuaikan outputnya.'
+---
+
+Generator Flowra dirancang untuk menjaga penamaan dan struktur tetap konsisten di seluruh modul. File yang dibuat adalah CommonJS sesuai gaya scaffold.
+
+## Scaffold modul
+
+```bash
+flowra make:module billing --controllers payments,refunds
+```
+
+Membuat:
+
+- `app/Modules/Billing/billing.module.js`
+- `app/Modules/Billing/billing.container.js`
+- `app/Modules/Billing/billing.routes.js`
+- File controller untuk tiap segmen controller
+- `Billing.service.js`, `Billing.validator.js`, `Billing.query.js`
+
+Modul juga ditambahkan ke `app/Modules/modules.manifest.js` secara otomatis.
+
+## Generate model
+
+```bash
+flowra make:model user --module users --table users --db default
+```
+
+Membuat model di direktori modul (`Users.model.js`) yang mewarisi base class `Model`.
+
+Jika `--module` tidak diberikan, model dibuat di `app/Models` (dibuat jika belum ada).
+
+## Generate controller dan service
+
+```bash
+flowra make:controller audit --module users
+flowra make:service audit --module users
+```
+
+Perintah ini membuat file baru di modul target, dan wiring Anda lakukan sesuai kebutuhan.
+
+## Generate route
+
+```bash
+flowra make:route audit --module users
+```
+
+Membuat file route sederhana dan mengikatnya ke controller utama modul. Anda bisa mengimpor dan memanggil fungsi route ini dari file routes modul.
+
+## Generate validator
+
+```bash
+flowra make:validator user --module users
+```
+
+Membuat file validator berbasis Zod. Pastikan `zod` terpasang jika belum ada.
+
+## Generate query
+
+```bash
+flowra make:query report --module analytics
+```
+
+Membuat helper query untuk operasi read-only.
+
+## Scaffold resource
+
+```bash
+flowra make:resource tasks
+```
+
+Membuat scaffold modul plus:
+
+- Model untuk resource
+- `resource.routes.js` dengan RESTful routes
+
+Setelah itu, pasang `resource.routes.js` di modul Anda atau gabungkan routes-nya.
+
+:::tip Gunakan CLI
+CLI menghasilkan wiring container dan konvensi penamaan yang mudah terlewat jika dilakukan manual.
+:::

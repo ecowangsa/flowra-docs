@@ -1,0 +1,86 @@
+---
+title: 'Routes & Controllers'
+description: 'Define Express routes inside modules and resolve controllers from the container.'
+---
+
+Flowra routes live inside modules. The HTTP router loops through all enabled modules and attaches their routes to Express.
+
+## Defining routes
+
+A route file receives both the Express router and the container:
+
+```js title="app/Modules/Users/users.routes.js"
+'use strict';
+const group = require('routergroup');
+
+function registerUsersRoutes({ router, container } = {}) {
+  if (!router || !container) {
+    return router;
+  }
+
+  const controller = container.resolve('modules.users.controllers.main');
+
+  router.use(
+    group('/users', (router) => {
+      router.get('/list', controller.list.bind(controller));
+      router.post('/create', controller.create.bind(controller));
+    })
+  );
+
+  return router;
+}
+
+module.exports = registerUsersRoutes;
+```
+
+Flowra uses `routergroup` to keep route prefixes consistent, but you can use plain Express routes if you prefer.
+
+## Controllers
+
+Controllers encapsulate request handling logic. They receive services via constructor injection:
+
+```js title="app/Modules/Users/Users.controller.js"
+const BaseController = require('../Shared/controllers/BaseController');
+const HttpError = require('../../Errors/HttpError');
+
+class UsersController extends BaseController {
+  constructor({ logger, usersService } = {}) {
+    super({ logger });
+    this.logger = logger;
+    this.usersService = usersService;
+  }
+
+  list = async (req, res, next) => {
+    try {
+      const users = await this.usersService.list();
+      res.status(200).json({ message: 'Success', data: users });
+    } catch (error) {
+      if (!(error instanceof HttpError)) {
+        this.logger?.error('http.users.list.failed', { message: error.message });
+      }
+      next(error);
+    }
+  };
+}
+
+module.exports = UsersController;
+```
+
+## Rendering views
+
+Modules can also render views. The Welcome module, for example, returns an EJS template:
+
+```js title="app/Modules/Welcome/Welcome.controller.js"
+class WelcomeController {
+  async index(req, res, next) {
+    try {
+      const context = await this.welcomeService.getLandingPageContext();
+      return res.render('welcome', context);
+    } catch (error) {
+      next(error);
+    }
+  }
+}
+```
+
+Flowra keeps the routing layer thin so controllers and services stay focused on business logic.

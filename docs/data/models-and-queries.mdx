@@ -1,0 +1,150 @@
+---
+title: 'Models & Queries'
+description: 'Use Flowra models and query classes to encapsulate database access.'
+---
+
+Flowra models extend the `Service` base class, which wraps Knex and provides helpers for reads, writes, and timestamps.
+
+## The Model base class
+
+`app/Config/Model.js` extends `Service` and provides defaults like table name, primary key, and allowed fields.
+
+```js title="app/Modules/Users/Users.model.js"
+const Model = require('../../Config/Model');
+
+class UsersModel extends Model {
+  constructor(connection = 'default') {
+    super(connection);
+    this.setTable('users');
+    this.setPrimaryKey('id');
+    this.setAllowedFields(['id', 'username', 'email', 'password']);
+    this.setTimestamps(true);
+    this.setSoftDelete(false);
+  }
+
+  async findAll() {
+    return this.read().select('*').whereNull('deletedAt');
+  }
+}
+
+module.exports = UsersModel;
+```
+
+## Service helpers
+
+`Service` provides:
+
+- `read()` and `write()` to build queries
+- `save()` and `saveBulk()` for inserts
+- `update()` and `delete()` for mutations
+- `readKnex()` to use a read replica when available
+
+## Query Builder (Knex)
+
+Flowra’s **Query Builder** is the Knex query builder that you access through `read()` and `write()`. This means you can use the full Knex API while keeping connection aliases consistent.
+
+Because Flowra models already set `this.tableName`, you do **not** need to call `.from('table')` for the current model unless you are joining or selecting across multiple tables.
+
+### Read queries
+
+Use `read()` for selects and reporting:
+
+```js title="app/Modules/Users/Users.model.js"
+getAll({ search, limit = 25, offset = 0 } = {}) {
+  const query = this.read()
+    .select('id', 'name', 'email', 'createdAt')
+    .orderBy('createdAt', 'desc')
+    .limit(limit)
+    .offset(offset);
+
+  if (search) {
+    query.where((builder) => {
+      builder
+        .where('email', 'like', `%${search}%`)
+        .orWhere('name', 'like', `%${search}%`);
+    });
+  }
+
+  return query;
+}
+
+getSingle(id) {
+  return this.read()
+    .select('id', 'name', 'email', 'createdAt')
+    .where({ id })
+    .first();
+}
+```
+
+### Joins and aggregates
+
+Knex supports joins and aggregates for richer reads:
+
+```js title="app/Modules/Users/Users.model.js"
+getUsersWithTeams() {
+  return this.read()
+    .select('users.id', 'users.name', 'teams.name as teamName')
+    .leftJoin('teams', 'teams.id', 'users.teamId')
+    .orderBy('users.name', 'asc');
+}
+```
+
+### Writes and transactions
+
+Use `write()` when you need to mutate data. Wrap complex changes in a transaction:
+
+```js title="app/Modules/Users/Users.model.js"
+async updateProfile(id, payload) {
+  const trx = await this.write().transaction();
+
+  try {
+    await this.write().transacting(trx).update(payload).where({ id });
+    await trx.commit();
+    return this.getSingle(id);
+  } catch (error) {
+    await trx.rollback();
+    throw error;
+  }
+}
+```
+
+Because the Query Builder is Knex, you can reuse familiar Knex patterns without leaving the Flowra model layer.
+
+## Query classes
+
+Queries are lightweight classes for specific read operations:
+
+```js title="app/Modules/Welcome/SystemInfo.query.js"
+class SystemInfoQuery {
+  async execute() {
+    return {
+      environment: process.env.NODE_ENV || 'development',
+      nodeVersion: process.version,
+      uptime: process.uptime(),
+    };
+  }
+}
+
+module.exports = SystemInfoQuery;
+```
+
+## Wiring models and queries
+
+Register models and queries in the module container:
+
+```js title="app/Modules/Users/users.container.js"
+const { asClass } = require('awilix');
+const UsersModel = require('./Users.model');
+
+module.exports = (scope) => {
+  scope.register({
+    models: {
+      user: asClass(UsersModel).singleton(),
+    },
+  });
+};
+```
+
+:::tip Keep reads and writes clean
+Use query classes for reporting and services for business logic. This keeps your code intentional and testable.
+:::

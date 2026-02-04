@@ -1,0 +1,41 @@
+---
+title: 'Request Lifecycle'
+description: 'Ikuti alur request dari Flowra CLI hingga container, middleware, dan routes modul.'
+---
+
+Setiap request Flowra mengikuti pipeline yang sama, sehingga perilaku konsisten dan mudah dipahami.
+
+## Alur startup
+
+1. `flowra serve` memuat `app/Bootstrap/server.bootstrap.js`.
+2. `buildContainer()` menyusun container dengan memanggil:
+   - `registerCore()` (config, logger, validation)
+   - `registerInfrastructure()` (database, cache, queue, mailer)
+   - `registerModules()` (module scopes dan routes)
+3. Express dikonfigurasi dengan middleware (helmet, compression, parsers, static files).
+4. Module routes didaftarkan lewat `app/Http/http.router.js`.
+5. Handler not-found dan error dipasang.
+6. Provider di `app/Config/App.js` dimuat.
+
+## Alur per request
+
+```text
+Incoming request
+  -> RequestContextMiddleware (request ID, logger, timing)
+  -> CORS + Morgan logging
+  -> Module routes
+  -> Controller -> Service -> Model/Query
+  -> Response
+  -> ErrorHandler (jika terjadi exception)
+```
+
+## File kunci
+
+- `app/Bootstrap/server.bootstrap.js` - setup Express dan middleware.
+- `app/Bootstrap/Container/compose.js` - komposisi container.
+- `app/Http/http.router.js` - pendaftaran route lintas modul.
+- `app/Http/Middleware/ErrorHandler.js` - response error JSON yang konsisten.
+
+:::note Provider hook
+Provider adalah tempat yang nyaman untuk mendaftarkan listener global atau tugas boot. Tambahkan di `app/Config/App.js`.
+:::

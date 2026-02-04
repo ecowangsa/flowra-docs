@@ -1,0 +1,70 @@
+---
+title: 'Struktur Proyek'
+description: 'Pelajari bagaimana aplikasi Flowra diorganisasi dan di mana menaruh kode Anda.'
+---
+
+Flowra memakai layout yang konsisten agar setiap proyek terasa familiar. Scaffold memisahkan infrastruktur framework dari modul aplikasi dan menjaga titik sentuh inti mudah ditemukan.
+
+## Gambaran direktori
+
+```text
+my-flowra-app/
+├─ app/
+│  ├─ Bootstrap/
+│  │  └─ Container/
+│  ├─ Config/
+│  ├─ Database/
+│  ├─ Errors/
+│  ├─ Http/
+│  │  └─ Middleware/
+│  ├─ Infrastructure/
+│  └─ Modules/
+│     └─ modules.manifest.js
+├─ core/
+│  ├─ Services/
+│  └─ Support/
+├─ main/
+│  └─ app.js
+├─ public/
+├─ resources/
+│  └─ views/
+├─ tests/
+├─ .env.example
+├─ orm.cli.config.js
+└─ package.json
+```
+
+## Folder penting
+
+- **`app/Modules/`**: Modul fitur (routes, controllers, services, models).
+- **`app/Bootstrap/`**: Startup server dan komposisi container.
+- **`app/Config/`**: Konfigurasi berbasis environment untuk app, DB, cache, dan logging.
+- **`app/Http/`**: Layer routing dan middleware.
+- **`app/Infrastructure/`**: Database dan cache manager.
+- **`core/`**: Helper framework (config loader, optional dependency loader, logger).
+- **`main/app.js`**: Entry point aplikasi.
+- **`resources/`**: Template view (EJS secara default).
+
+## Anatomi modul
+
+Modul yang dihasilkan terlihat seperti ini:
+
+```text
+app/Modules/Users/
+├─ Users.controller.js
+├─ Users.model.js
+├─ Users.service.js
+├─ users.container.js
+├─ users.module.js
+└─ users.routes.js
+```
+
+- **`users.module.js`** memasang modul ke container dan routes.
+- **`users.container.js`** mendaftarkan controllers, services, models, dan alias.
+- **`users.routes.js`** memasang Express routes.
+- **`Users.service.js`** berisi domain logic.
+- **`Users.model.js`** membungkus operasi database.
+
+:::tip Jaga modul tetap mandiri
+Saat fitur membesar, simpan logic di dalam modul daripada menyebar ke folder shared.
+:::

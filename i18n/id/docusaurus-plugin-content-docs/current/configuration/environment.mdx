@@ -1,0 +1,56 @@
+---
+title: 'Environment Variables'
+description: 'Referensi lengkap environment variables pada scaffold Flowra.'
+---
+
+Flowra membaca konfigurasi dari `.env` saat runtime. CLI bisa membuat ulang template dengan:
+
+```bash
+flowra env:example
+```
+
+Di bawah ini daftar lengkap variabel yang digunakan scaffold default.
+
+## App
+
+| Variable | Tujuan | Default |
+| --- | --- | --- |
+| `APP_NAME` | Nama aplikasi yang mudah dibaca | `Flowra` |
+| `APP_ENV` | Runtime environment (`development`, `staging`, `production`) | `development` |
+| `APP_DEBUG` | Mengaktifkan logging verbose | `true` |
+| `APP_URL` | Base URL untuk outbound links | `http://localhost:3387` |
+| `APP_PORT` | Port HTTP server | `3387` |
+| `APP_TIMEZONE` | Timezone default aplikasi | `Asia/Jakarta` |
+| `LOG_LEVEL` | Level logger | `info` |
+| `CORS_ORIGIN` | Daftar origin yang diizinkan, dipisah koma | `*` |
+| `SESSION_SECRET` | Secret untuk signing sessions | kosong |
+
+## Database (default MySQL)
+
+| Variable | Tujuan | Default |
+| --- | --- | --- |
+| `DB_MYSQL_HOST_PRIMARY` | Host database utama | `127.0.0.1` |
+| `DB_MYSQL_PORT_PRIMARY` | Port database utama | `3306` |
+| `DB_MYSQL_HOST_READONLY` | Host database read-only | kosong |
+| `DB_MYSQL_PORT_READONLY` | Port database read-only | kosong |
+| `DB_MYSQL_HOST_STANDBY` | Host database standby | kosong |
+| `DB_MYSQL_PORT_STANDBY` | Port database standby | kosong |
+| `DB_DEFAULT_USERNAME` | Username database | `root` |
+| `DB_DEFAULT_PASSWORD` | Password database | kosong |
+| `DB_DEFAULT_DATABASE` | Nama database | `flowra` |
+| `DB_MYSQL_HOST` | Host fallback jika primary tidak diset | `127.0.0.1` |
+| `DB_MYSQL_PORT` | Port fallback jika primary tidak diset | `3306` |
+| `DB_MYSQL_SSL` | Aktifkan TLS/SSL (`true`/`false`) | `false` |
+| `DB_MYSQL_SSL_CA` | CA certificate opsional (string atau path) | kosong |
+| `DB_REMOTE_CLOUD` | Reserved untuk custom socket logic | `false` |
+
+## Cache dan queue
+
+| Variable | Tujuan | Default |
+| --- | --- | --- |
+| `CACHE_URL` | Connection string cache server | kosong |
+| `QUEUE_URL` | Connection string queue server | kosong |
+
+:::note Kustomisasi per proyek
+Anda bisa mengubah default dengan mengedit `app/Config/*.js`. Perbarui `.env.example` setelah perubahan.
+:::

@@ -1,0 +1,93 @@
+---
+title: 'Contoh: Users API'
+description: 'Perluas modul Users bawaan menjadi CRUD API sederhana.'
+---
+
+Contoh ini membangun di atas modul Users default yang ada pada proyek Flowra baru.
+
+## 1. Jalankan migration
+
+Scaffold sudah menyertakan migration untuk tabel `users`.
+
+```bash
+flowra db:migrate:latest
+```
+
+## 2. Update routes
+
+Ubah routes Users ke bentuk RESTful:
+
+```js title="app/Modules/Users/users.routes.js"
+'use strict';
+const group = require('routergroup');
+
+module.exports = ({ router, container } = {}) => {
+  if (!router || !container) {
+    return router;
+  }
+
+  const controller = container.resolve('modules.users.controllers.main');
+
+  router.use(
+    group('/users', (router) => {
+      router.get('/', controller.list.bind(controller));
+      router.post('/', controller.create.bind(controller));
+      router.put('/:id', controller.update.bind(controller));
+      router.delete('/:id', controller.destroy.bind(controller));
+    })
+  );
+
+  return router;
+};
+```
+
+## 3. Tambahkan logic update dan delete
+
+Perluas controller dan service dengan metode `update` dan `destroy`.
+
+```js title="app/Modules/Users/Users.controller.js"
+update = async (req, res, next) => {
+  try {
+    const result = await this.usersService.update(req.params.id, req.body);
+    res.json({ message: 'Updated', data: result });
+  } catch (error) {
+    next(error);
+  }
+};
+
+destroy = async (req, res, next) => {
+  try {
+    await this.usersService.destroy(req.params.id);
+    res.status(204).end();
+  } catch (error) {
+    next(error);
+  }
+};
+```
+
+```js title="app/Modules/Users/Users.service.js"
+async update(id, payload) {
+  return this.userModel.update(id, payload);
+}
+
+async destroy(id) {
+  return this.userModel.delete(id);
+}
+```
+
+## 4. Jalankan dan uji
+
+```bash
+npm run dev
+```
+
+Sekarang Anda bisa memanggil:
+
+- `GET /users`
+- `POST /users`
+- `PUT /users/:id`
+- `DELETE /users/:id`
+
+:::tip Langkah berikutnya
+Coba tambahkan aturan validasi di `update()` atau buat query class untuk reporting.
+:::

@@ -1,0 +1,433 @@
+---
+title: 'Build Your First API'
+description: 'Generate a Users module with CRUD + auth, validate requests, and wire everything through Flowra.'
+---
+
+Build a complete Users module with scaffolding, models, services, container registration, controllers, routes, validation, and route inspection.
+
+## 1. Generate the module and scaffolds
+
+Start by generating the module, model, and validator:
+
+```bash
+flowra make:module users --controllers users,auth
+flowra make:model user --module users --table users
+flowra make:validator user --module users
+```
+
+Flowra creates `app/Modules/Users` and updates the manifest. You should now have:
+
+- `users.module.js` (module entry)
+- `users.container.js` (container registration)
+- `users.routes.js` (Express routes)
+- `Users.controller.js` + `Auth.controller.js`
+- `Users.service.js`
+- `Users.model.js`
+
+## 2. Create the migration and migrate the database
+
+Before updating the model, create a migration so your database schema is ready:
+
+```bash
+flowra db:migrate:make create_users_table
+flowra db:migrate:latest
+```
+
+Define the `users` table in the generated migration using columns like `id`, `name`, `email`, `password_hash`, and timestamps.
+
+Here is a minimal migration example:
+
+```js title="database/migrations/2026_02_03_000000_create_users_table.js"
+exports.up = function (knex) {
+  return knex.schema.createTable('users', (table) => {
+    table.increments('id').primary();
+    table.string('name').notNullable();
+    table.string('email').notNullable().unique();
+    table.string('password_hash').notNullable();
+    table.timestamps(true, true);
+  });
+};
+
+exports.down = function (knex) {
+  return knex.schema.dropTable('users');
+};
+```
+
+## 3. Update the model (Query Builder + Knex)
+
+The model is where you centralize database access. Flowra models wrap the Knex query builder, so you can chain `select`, `where`, `limit`, and joins.
+
+Add simple `getAll` and `getSingle` helpers that you can reuse throughout the app:
+
+```js title="app/Modules/Users/Users.model.js"
+const Model = require('../../Config/Model');
+
+class UsersModel extends Model {
+  constructor(connection = 'default') {
+    super(connection);
+    this.setTable('users');
+    this.setPrimaryKey('id');
+    this.setAllowedFields(['id', 'name', 'email', 'password_hash']);
+    this.setTimestamps(true);
+    this.setSoftDelete(false);
+  }
+
+  getAll({ search, limit = 25, offset = 0 } = {}) {
+    const query = this.read()
+      .select('id', 'name', 'email', 'createdAt')
+      .orderBy('createdAt', 'desc')
+      .limit(limit)
+      .offset(offset);
+
+    if (search) {
+      query.where((builder) => {
+        builder
+          .where('email', 'like', `%${search}%`)
+          .orWhere('name', 'like', `%${search}%`);
+      });
+    }
+
+    return query;
+  }
+
+  getSingle(id) {
+    return this.read()
+      .select('id', 'name', 'email', 'createdAt')
+      .where({ id })
+      .first();
+  }
+
+  findByEmail(email) {
+    return this.read()
+      .select('id', 'name', 'email', 'password_hash')
+      .where({ email })
+      .first();
+  }
+}
+
+module.exports = UsersModel;
+```
+
+This uses Flowra’s **Query Builder (Knex)** layer. For more examples and patterns, see the [Query Builder](../data/models-and-queries#query-builder-knex) section.
+
+## 4. Update the services
+
+Services own the business logic. Keep them thin and let the model handle database queries.
+
+```js title="app/Modules/Users/Users.service.js"
+const HttpError = require('../../Errors/HttpError');
+
+class UsersService {
+  constructor({ models } = {}) {
+    this.usersModel = models.user;
+  }
+
+  async list({ search, limit, offset } = {}) {
+    return this.usersModel.getAll({ search, limit, offset });
+  }
+
+  async get(id) {
+    const user = await this.usersModel.getSingle(id);
+    if (!user) {
+      throw new HttpError(404, 'User not found');
+    }
+    return user;
+  }
+
+  async create(payload) {
+    const id = await this.usersModel.save({
+      name: payload.name,
+      email: payload.email,
+    });
+    return this.get(id);
+  }
+
+  async update(id, payload) {
+    await this.usersModel.update(id, payload);
+    return this.get(id);
+  }
+
+  async remove(id) {
+    await this.usersModel.delete(id);
+    return { ok: true };
+  }
+}
+
+module.exports = UsersService;
+```
+
+For authentication flows, add a dedicated service so login/registration stays separated from CRUD:
+
+```js title="app/Modules/Users/Auth.service.js"
+const HttpError = require('../../Errors/HttpError');
+
+class AuthService {
+  constructor({ models, passwordHasher } = {}) {
+    this.usersModel = models.user;
+    this.passwordHasher = passwordHasher;
+  }
+
+  async register(payload) {
+    const passwordHash = await this.passwordHasher.hash(payload.password);
+    const id = await this.usersModel.save({
+      name: payload.name,
+      email: payload.email,
+      password_hash: passwordHash,
+    });
+    return this.usersModel.getSingle(id);
+  }
+
+  async login({ email, password }) {
+    const user = await this.usersModel.findByEmail(email);
+    if (!user) {
+      throw new HttpError(401, 'Invalid credentials');
+    }
+
+    const valid = await this.passwordHasher.compare(password, user.password_hash);
+    if (!valid) {
+      throw new HttpError(401, 'Invalid credentials');
+    }
+
+    return {
+      user: { id: user.id, name: user.name, email: user.email },
+      token: 'replace-with-jwt',
+    };
+  }
+}
+
+module.exports = AuthService;
+```
+
+Register `passwordHasher` in your root container (e.g., using bcrypt or argon2) so the service can hash and compare passwords.
+
+
+## 5. Build controllers with validation
+
+Controllers validate incoming data and call the services.
+
+```js title="app/Modules/Users/Users.controller.js"
+const HttpError = require('../../Errors/HttpError');
+
+class UsersController {
+  constructor({ services, validationFactory } = {}) {
+    this.usersService = services.users;
+    this.validationFactory = validationFactory;
+  }
+
+  get createRules() {
+    return {
+      name: { required: true },
+      email: { required: true, is_email: true },
+    };
+  }
+
+  get updateRules() {
+    return {
+      name: { required: false },
+      email: { required: false, is_email: true },
+    };
+  }
+
+  async list(req, res) {
+    const users = await this.usersService.list(req.query);
+    return res.json(users);
+  }
+
+  async show(req, res) {
+    const user = await this.usersService.get(req.params.id);
+    return res.json(user);
+  }
+
+  async create(req, res) {
+    const validator = this.validationFactory(this.createRules);
+    const errors = await validator.validate(req.body);
+    if (errors.length > 0) {
+      throw new HttpError(422, 'Validation failed', errors);
+    }
+
+    const user = await this.usersService.create({
+      name: req.body.name,
+      email: req.body.email,
+    });
+
+    return res.status(201).json(user);
+  }
+
+  async update(req, res) {
+    const validator = this.validationFactory(this.updateRules);
+    const errors = await validator.validate(req.body);
+    if (errors.length > 0) {
+      throw new HttpError(422, 'Validation failed', errors);
+    }
+
+    const user = await this.usersService.update(req.params.id, req.body);
+    return res.json(user);
+  }
+
+  async destroy(req, res) {
+    await this.usersService.remove(req.params.id);
+    return res.status(204).send();
+  }
+}
+
+module.exports = UsersController;
+```
+
+Authentication controller example:
+
+```js title="app/Modules/Users/Auth.controller.js"
+const HttpError = require('../../Errors/HttpError');
+
+class AuthController {
+  constructor({ services, validationFactory } = {}) {
+    this.authService = services.auth;
+    this.validationFactory = validationFactory;
+  }
+
+  get registerRules() {
+    return {
+      name: { required: true },
+      email: { required: true, is_email: true },
+      password: { required: true, minLength: 8 },
+    };
+  }
+
+  get loginRules() {
+    return {
+      email: { required: true, is_email: true },
+      password: { required: true },
+    };
+  }
+
+  async register(req, res) {
+    const validator = this.validationFactory(this.registerRules);
+    const errors = await validator.validate(req.body);
+    if (errors.length > 0) {
+      throw new HttpError(422, 'Validation failed', errors);
+    }
+
+    const user = await this.authService.register(req.body);
+    return res.status(201).json(user);
+  }
+
+  async login(req, res) {
+    const validator = this.validationFactory(this.loginRules);
+    const errors = await validator.validate(req.body);
+    if (errors.length > 0) {
+      throw new HttpError(422, 'Validation failed', errors);
+    }
+
+    const result = await this.authService.login(req.body);
+    return res.json(result);
+  }
+}
+
+module.exports = AuthController;
+```
+
+## 6. Wire the routes
+
+Bind the controllers in `users.routes.js` so the HTTP layer maps to your logic:
+
+```js title="app/Modules/Users/users.routes.js"
+'use strict';
+
+function registerUsersRoutes({ router, container } = {}) {
+  if (!router || !container) {
+    return router;
+  }
+
+  const usersController = container.resolve('modules.users.controllers.users');
+  const authController = container.resolve('modules.users.controllers.auth');
+
+  router.get('/users', usersController.list.bind(usersController));
+  router.get('/users/:id', usersController.show.bind(usersController));
+  router.post('/users', usersController.create.bind(usersController));
+  router.patch('/users/:id', usersController.update.bind(usersController));
+  router.delete('/users/:id', usersController.destroy.bind(usersController));
+
+  router.post('/auth/register', authController.register.bind(authController));
+  router.post('/auth/login', authController.login.bind(authController));
+
+  return router;
+}
+
+module.exports = registerUsersRoutes;
+```
+
+
+## 7. Register everything in the container
+
+Wire models, services, controllers, and routes in the module container so Flowra can resolve them by name:
+
+```js title="app/Modules/Users/users.container.js"
+const { asClass, asValue } = require('awilix');
+const UsersModel = require('./Users.model');
+const UsersService = require('./Users.service');
+const AuthService = require('./Auth.service');
+const UsersController = require('./Users.controller');
+const AuthController = require('./Auth.controller');
+const registerUsersRoutes = require('./users.routes');
+
+module.exports = (scope) => {
+  scope.register({
+    models: {
+      user: asClass(UsersModel).singleton(),
+    },
+    services: {
+      users: asClass(UsersService).singleton(),
+      auth: asClass(AuthService).singleton(),
+    },
+    controllers: {
+      users: asClass(UsersController).singleton(),
+      auth: asClass(AuthController).singleton(),
+    },
+    routes: asValue(registerUsersRoutes),
+  });
+};
+```
+## 8. Validate the module and inspect routes
+
+Flowra lets you enable/disable modules and inspect what routes are active:
+
+```bash
+flowra module:list
+flowra module:disable users
+flowra module:enable users
+flowra route:list
+```
+
+This is the quickest way to verify that your module is wired correctly before testing requests.
+
+## 9. Sample CRUD UI flow
+
+A typical UI flow calls these endpoints in order:
+
+- **Registration form** → `POST /auth/register`
+- **Login form** → `POST /auth/login`
+- **Users list** → `GET /users`
+- **User details** → `GET /users/:id`
+- **Edit profile** → `PATCH /users/:id`
+- **Delete user** → `DELETE /users/:id`
+
+This maps cleanly to the controller methods you just created.
+
+## 10. Run the server
+
+Before running, you can check environment variables:
+
+```bash
+flowra env:check
+```
+
+Start the server:
+
+```bash
+npm run dev
+```
+
+Visit `http://localhost:3387/users` to confirm the API returns data.
+
+:::tip Next ideas
+Explore the [Routing guide](../routing/routes-and-controllers) or deepen the data layer in [Models & Queries](../data/models-and-queries).
+:::

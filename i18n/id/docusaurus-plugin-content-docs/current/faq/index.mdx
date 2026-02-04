@@ -1,0 +1,28 @@
+---
+title: 'FAQ'
+description: 'Pertanyaan yang sering ditanyakan tentang Flowra.'
+---
+
+## Apakah Flowra TypeScript-first?
+
+Flowra secara default men-scaffold CommonJS JavaScript. Anda bisa memakai TypeScript dengan menambahkan build step dan menyesuaikan scaffold, tetapi itu tidak wajib.
+
+## Apakah saya bisa memakai database selain MySQL?
+
+Bisa. Ubah `app/Config/Database.js` untuk memakai client Knex lain (PostgreSQL, SQLite, MSSQL). Bagian lain tetap sama.
+
+## Apakah Flowra mendukung modul di luar `app/Modules`?
+
+Modul dimuat dari manifest di `app/Modules/modules.manifest.js`. Anda bisa menunjuk path lain, tetapi disarankan tetap di `app/Modules`.
+
+## Bagaimana menambah middleware custom?
+
+Tambahkan di `app/Bootstrap/server.bootstrap.js` sebelum module routes didaftarkan.
+
+## Kenapa `env:example` membuat variabel berbeda?
+
+`flowra env:example` dibuat dari schema CLI. Jika Anda mengubah config keys, sesuaikan `.env.example` dengan `app/Config/Database.js` dan file config lain.
+
+## Bisakah menonaktifkan modul tanpa menghapus file?
+
+Bisa. Gunakan `flowra module:disable <name>` atau set `enabled: false` di manifest.

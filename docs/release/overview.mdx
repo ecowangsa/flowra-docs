@@ -1,0 +1,49 @@
+---
+title: 'Releases & Versioning'
+description: 'How Flowra versions the CLI, how projects pin dependencies, and where to track changes.'
+---
+
+Flowra is distributed as an npm package (`flowra-cli`). The CLI version is the primary release artifact and is used to scaffold projects.
+
+## How versions map to projects
+
+When you run:
+
+```bash
+flowra create-app my-app
+```
+
+Flowra pins the generated project to the current CLI version. You can override that version with:
+
+```bash
+flowra create-app my-app --framework-version 1.0.0
+```
+
+This controls the `flowra-cli` version saved in `package.json`.
+
+## Checking the CLI version
+
+```bash
+flowra --version
+```
+
+## Compatibility notes
+
+The default scaffold includes:
+
+- Node.js 18+ support
+- Express 4.x
+- Knex 3.x
+- MySQL2 3.x
+
+If you upgrade dependencies, confirm them in `package.json` and run your tests.
+
+## Where to track changes
+
+See the changelog for release-by-release details:
+
+- [Flowra CLI changelog](https://github.com/ecowangsa/flowra-cli/blob/main/CHANGELOG.md)
+
+:::tip Production upgrades
+Always review the changelog before upgrading and test in staging.
+:::

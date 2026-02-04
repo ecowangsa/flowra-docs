@@ -1,0 +1,55 @@
+---
+title: 'Service Container'
+description: 'Flowra resolves dependencies through a container with scoped module registrations.'
+---
+
+Flowra uses a lightweight container that supports plain functions, values, and Awilix-style resolvers. It keeps dependency resolution explicit and testable.
+
+## How it works
+
+- `container.register(name, factory)` registers a dependency.
+- Dependencies are **singletons by default** unless configured otherwise.
+- `container.createScope(prefix)` creates a namespaced scope for modules.
+- Scopes can register nested objects, which become resolved as dot-notation keys.
+
+## Module scopes
+
+Modules are registered under the `modules.<name>` namespace. For example, the Users module registers:
+
+```js title="app/Modules/Users/users.container.js"
+const { asClass, asValue } = require('awilix');
+const UsersService = require('./Users.service');
+const UsersController = require('./Users.controller');
+const registerUsersRoutes = require('./users.routes');
+
+module.exports = (scope) => {
+  scope.register({
+    services: {
+      main: asClass(UsersService).singleton(),
+    },
+    controllers: {
+      main: asClass(UsersController).singleton(),
+    },
+    routes: asValue(registerUsersRoutes),
+  });
+
+  scope.registerAlias('usersController', 'controllers.main');
+};
+```
+
+The container exposes these with dot notation:
+
+```js
+const controller = container.resolve('modules.users.controllers.main');
+```
+
+## Container API highlights
+
+- `register()` accepts a string + factory or a nested object.
+- `resolve()` throws if a dependency is missing, which keeps errors visible.
+- `createScope()` builds grouped accessors like `modules.users.services`.
+- `cradle` provides a convenient proxy for resolved services.
+
+:::tip Testing
+Because dependencies are explicit, you can swap implementations by registering mocks in a test-only container scope.
+:::

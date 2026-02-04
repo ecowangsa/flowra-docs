@@ -1,0 +1,87 @@
+---
+title: 'Installation & Setup'
+description: 'Install the Flowra CLI, create a new project, and run the development server.'
+---
+
+This guide covers installing Flowra, generating a project, and running the dev server.
+
+## Requirements
+
+| Requirement | Notes |
+| --- | --- |
+| Node.js | 18+ (LTS recommended) |
+| Package manager | npm, yarn, or pnpm |
+| Database | MySQL by default (can be changed in config) |
+
+## Install the CLI
+
+Global install:
+
+```bash
+npm install -g flowra-cli
+```
+
+Project-local install (recommended for teams and CI):
+
+```bash
+npm install --save-dev flowra-cli
+```
+
+When installed locally, run commands with `npx flowra`.
+
+## Create a project
+
+```bash
+flowra create-app my-flowra-app
+```
+
+You can override the default framework version used in `package.json`:
+
+```bash
+flowra create-app my-flowra-app --framework-version 1.0.0
+```
+
+## Install dependencies and run
+
+```bash
+cd my-flowra-app
+npm install
+npm run dev
+```
+
+The `dev` script uses `flowra serve:watch` (hot reload). For a production-style run:
+
+```bash
+npm start
+```
+
+## Configure environment variables
+
+Copy the default environment file:
+
+```bash
+cp .env.example .env
+```
+
+The scaffold includes MySQL defaults. Update these values to match your database:
+
+- `DB_MYSQL_HOST_PRIMARY`
+- `DB_MYSQL_PORT_PRIMARY`
+- `DB_DEFAULT_USERNAME`
+- `DB_DEFAULT_PASSWORD`
+- `DB_DEFAULT_DATABASE`
+
+If you want to use a different database, update `app/Config/Database.js` accordingly.
+
+## Sanity checks
+
+List available routes and verify database connectivity:
+
+```bash
+flowra route:list
+flowra health:check
+```
+
+:::tip Next steps
+Continue with [Project Structure](./project-structure) to understand the scaffold layout, or build your [First API](./first-api).
+:::

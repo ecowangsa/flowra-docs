@@ -1,0 +1,59 @@
+---
+title: 'Panduan Deployment'
+description: 'Deploy Flowra di produksi dengan environment variables dan process management yang tepat.'
+---
+
+Flowra adalah layanan Node.js standar. Deployment fokus pada konfigurasi environment, process management, dan observability.
+
+## Build dan run
+
+Instal dependencies lalu jalankan server:
+
+```bash
+npm install
+npm start
+```
+
+`npm start` menjalankan `flowra serve` yang menginisialisasi container, mendaftarkan modul, dan menjalankan Express.
+
+## Environment variables
+
+Set environment produksi:
+
+```bash
+APP_ENV=production
+APP_DEBUG=false
+LOG_LEVEL=info
+```
+
+Konfigurasikan database dan cache sesuai kebutuhan. Gunakan `.env` atau secret manager platform Anda.
+
+## Health checks
+
+Gunakan CLI untuk memvalidasi koneksi database:
+
+```bash
+flowra health:check --json
+```
+
+Untuk readiness check ringan, `flowra serve --once` akan start dan exit setelah server siap.
+
+## Process managers
+
+Flowra berjalan baik dengan:
+
+- systemd
+- PM2
+- Docker
+- Kubernetes
+
+Pastikan proses Node otomatis restart jika gagal dan log dikoleksi.
+
+## Static assets dan views
+
+- `public/` disajikan sebagai static assets.
+- `resources/views/` berisi template EJS.
+
+:::tip Log produksi
+Aktifkan file logging di `app/Config/Logger.js` untuk menyimpan log di `storage/logs`.
+:::

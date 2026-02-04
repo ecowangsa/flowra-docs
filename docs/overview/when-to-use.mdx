@@ -1,0 +1,30 @@
+---
+title: 'When to Use Flowra'
+description: 'Understand which projects benefit most from Flowra and when a lighter approach may be better.'
+---
+
+Flowra shines when a project needs clear boundaries, repeatable patterns, and a strong developer experience. If those traits matter, Flowra is likely a fit.
+
+## Flowra is a great fit when
+
+- You are building **modular APIs** with multiple features or teams.
+- You want **consistent service and controller patterns** across the codebase.
+- You need **repeatable scaffolding** for modules, migrations, and resources.
+- Your API needs **database access with clear conventions** and connection management.
+- You want **Express compatibility** with more structure and tooling.
+
+## Flowra might be too much when
+
+- The project is a **single endpoint** or a short-lived script.
+- You are deploying **serverless functions** where cold-start size matters.
+- You want a **no-structure, rapid prototype** that will not be maintained.
+
+## A quick decision check
+
+| Question | If "yes" | If "no" |
+| --- | --- | --- |
+| Will this API grow beyond a handful of routes? | Flowra helps keep it organized. | Express alone might be enough. |
+| Do you have multiple developers or teams? | Flowra provides shared patterns. | A lighter setup could be fine. |
+| Do you value scaffolding and consistent structure? | Flowra is a strong match. | You can skip the framework layer. |
+
+Flowra is not about adding ceremony. It is about giving you a clear, repeatable system when the codebase starts to scale.

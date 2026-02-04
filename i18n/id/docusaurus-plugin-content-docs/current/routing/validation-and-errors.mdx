@@ -1,0 +1,75 @@
+---
+title: 'Validasi & Error'
+description: 'Validasi data masuk dan kembalikan response error yang konsisten di Flowra.'
+---
+
+Flowra menyediakan helper validasi dan format response error yang konsisten.
+
+## Aturan validasi
+
+Helper validasi berada di `app/Config/Validation.js` dan mendukung aturan seperti:
+
+- `required`
+- `minLength`
+- `is_email`
+- `alpha_numeric`
+- `alpha_numeric_space`
+- `valid_url`
+- `valid_ip`
+- `is_unique` (cek `table.column`)
+
+Gunakan `validationFactory` dari container untuk membuat validator di service atau controller:
+
+```js title="app/Modules/Users/Users.service.js"
+const HttpError = require('../../Errors/HttpError');
+
+class UsersService {
+  constructor({ validationFactory } = {}) {
+    this.validationFactory = validationFactory;
+  }
+
+  get rules() {
+    return {
+      username: { required: true, alpha_numeric: true },
+      email: { required: true, is_email: true, is_unique: 'users.email' },
+      password: { required: true, minLength: 8 },
+    };
+  }
+
+  async create(payload) {
+    const validator = this.validationFactory(this.rules);
+    const errors = await validator.validate(payload);
+    if (errors.length > 0) {
+      throw new HttpError(422, 'Validation failed', errors);
+    }
+
+    // Persist payload...
+  }
+}
+```
+
+## Error handling
+
+Flowra membungkus error dengan `HttpError` dan mengembalikan response JSON yang konsisten lewat middleware `ErrorHandler`:
+
+```json
+{
+  "code": "E_HTTP_ERROR",
+  "statusCode": 500,
+  "message": "Internal server error",
+  "details": {
+    "stack": "..."
+  },
+  "timestamp": "2026-02-03T00:00:00.000Z",
+  "path": "/users/list",
+  "requestId": "..."
+}
+```
+
+### Not found
+
+Middleware not-found melempar `HttpError(404, ...)` agar response konsisten.
+
+:::tip Tetap eksplisit
+Gunakan `HttpError` untuk kegagalan yang terduga (validasi, permissions). Biarkan error tak terduga masuk ke handler.
+:::

@@ -1,0 +1,75 @@
+---
+title: 'Validation & Errors'
+description: 'Validate incoming data and return consistent error responses in Flowra.'
+---
+
+Flowra ships with a validation helper and a unified error response format.
+
+## Validation rules
+
+The validation helper lives in `app/Config/Validation.js` and supports common rules like:
+
+- `required`
+- `minLength`
+- `is_email`
+- `alpha_numeric`
+- `alpha_numeric_space`
+- `valid_url`
+- `valid_ip`
+- `is_unique` (checks `table.column`)
+
+Use the `validationFactory` from the container to create a validator in services or controllers:
+
+```js title="app/Modules/Users/Users.service.js"
+const HttpError = require('../../Errors/HttpError');
+
+class UsersService {
+  constructor({ validationFactory } = {}) {
+    this.validationFactory = validationFactory;
+  }
+
+  get rules() {
+    return {
+      username: { required: true, alpha_numeric: true },
+      email: { required: true, is_email: true, is_unique: 'users.email' },
+      password: { required: true, minLength: 8 },
+    };
+  }
+
+  async create(payload) {
+    const validator = this.validationFactory(this.rules);
+    const errors = await validator.validate(payload);
+    if (errors.length > 0) {
+      throw new HttpError(422, 'Validation failed', errors);
+    }
+
+    // Persist payload...
+  }
+}
+```
+
+## Error handling
+
+Flowra wraps errors with `HttpError` and returns a consistent JSON response through `ErrorHandler` middleware:
+
+```json
+{
+  "code": "E_HTTP_ERROR",
+  "statusCode": 500,
+  "message": "Internal server error",
+  "details": {
+    "stack": "..."
+  },
+  "timestamp": "2026-02-03T00:00:00.000Z",
+  "path": "/users/list",
+  "requestId": "..."
+}
+```
+
+### Not found
+
+The not-found middleware throws an `HttpError(404, ...)` so missing routes use the same response format.
+
+:::tip Keep it explicit
+Use `HttpError` for expected failures (validation, permissions). Let unexpected errors bubble to the handler.
+:::

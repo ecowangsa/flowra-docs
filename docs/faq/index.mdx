@@ -1,0 +1,28 @@
+---
+title: 'FAQ'
+description: 'Frequently asked questions about Flowra.'
+---
+
+## Is Flowra TypeScript-first?
+
+Flowra scaffolds CommonJS JavaScript by default. You can adopt TypeScript by adding a build step and adjusting the scaffold, but it is not required.
+
+## Can I use a database other than MySQL?
+
+Yes. Update `app/Config/Database.js` to use another Knex-supported client (PostgreSQL, SQLite, MSSQL). The rest of the framework stays the same.
+
+## Does Flowra support modules outside `app/Modules`?
+
+Modules are loaded from the manifest in `app/Modules/modules.manifest.js`. You can point entries at any path, but keeping them under `app/Modules` is recommended.
+
+## How do I add custom middleware?
+
+Add it in `app/Bootstrap/server.bootstrap.js` before module routes are registered.
+
+## Why does `env:example` regenerate different variables?
+
+`flowra env:example` is generated from the CLI schema. If you customize configuration keys, update your `.env.example` to match `app/Config/Database.js` and other config files.
+
+## Can I disable a module without deleting files?
+
+Yes. Use `flowra module:disable <name>` or set `enabled: false` in the manifest.

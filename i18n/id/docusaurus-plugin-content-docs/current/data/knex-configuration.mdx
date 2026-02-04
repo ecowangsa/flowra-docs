@@ -1,0 +1,54 @@
+---
+title: 'Konfigurasi Database'
+description: 'Konfigurasikan koneksi Knex dan alias database di Flowra.'
+---
+
+Flowra menggunakan Knex di bawahnya. Konfigurasi database berada di `app/Config/Database.js` dan digunakan oleh `DatabaseManager`.
+
+## Konfigurasi default
+
+```js title="app/Config/Database.js"
+module.exports = {
+  default: 'default',
+  connections: {
+    default: {
+      client: 'mysql2',
+      connection: {
+        host: process.env.DB_MYSQL_HOST_PRIMARY || process.env.DB_MYSQL_HOST || '127.0.0.1',
+        user: process.env.DB_DEFAULT_USERNAME || 'root',
+        password: process.env.DB_DEFAULT_PASSWORD || '',
+        database: process.env.DB_DEFAULT_DATABASE || 'flowra',
+        port: parseInt(process.env.DB_MYSQL_PORT_PRIMARY || process.env.DB_MYSQL_PORT, 10),
+      },
+    },
+    defaultRead: {
+      client: 'mysql2',
+      connection: {
+        host: process.env.DB_MYSQL_HOST_READONLY || process.env.DB_MYSQL_HOST || '127.0.0.1',
+        user: process.env.DB_DEFAULT_USERNAME || 'root',
+        password: process.env.DB_DEFAULT_PASSWORD || '',
+        database: process.env.DB_DEFAULT_DATABASE || 'flowra',
+      },
+    },
+  },
+};
+```
+
+## Alias koneksi
+
+- `default` adalah koneksi utama.
+- `defaultRead` digunakan untuk operasi read jika tersedia.
+
+Services dan models bisa memilih alias koneksi lewat base class `Service`.
+
+## Konfigurasi CLI
+
+`orm.cli.config.js` membaca konfigurasi database dan memetakannya ke perintah Knex CLI. Anda bisa override nama koneksi dengan environment variable seperti `KNEX_CONNECTION`.
+
+## Ganti database
+
+Untuk memakai PostgreSQL atau database lain, ubah nilai `client` dan `connection` di `app/Config/Database.js`. Bagian lain tetap sama.
+
+:::tip Satu sumber kebenaran
+Flowra membaca dari `app/Config/Database.js` saat runtime dan dari `orm.cli.config.js` untuk migrasi CLI, jadi Anda hanya menjaga satu sumber kebenaran.
+:::

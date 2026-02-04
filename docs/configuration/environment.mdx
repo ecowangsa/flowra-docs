@@ -1,0 +1,56 @@
+---
+title: 'Environment Variables'
+description: 'Complete reference of the Flowra scaffold environment variables.'
+---
+
+Flowra reads configuration from `.env` at runtime. The CLI can regenerate the template using:
+
+```bash
+flowra env:example
+```
+
+Below is the full list of variables used by the default scaffold.
+
+## App
+
+| Variable | Purpose | Default |
+| --- | --- | --- |
+| `APP_NAME` | Human-readable application name | `Flowra` |
+| `APP_ENV` | Runtime environment (`development`, `staging`, `production`) | `development` |
+| `APP_DEBUG` | Enable verbose logging | `true` |
+| `APP_URL` | Base URL for outbound links | `http://localhost:3387` |
+| `APP_PORT` | HTTP server port | `3387` |
+| `APP_TIMEZONE` | Default application timezone | `Asia/Jakarta` |
+| `LOG_LEVEL` | Logger severity threshold | `info` |
+| `CORS_ORIGIN` | Comma-separated list of allowed origins | `*` |
+| `SESSION_SECRET` | Secret used for signing sessions | empty |
+
+## Database (MySQL defaults)
+
+| Variable | Purpose | Default |
+| --- | --- | --- |
+| `DB_MYSQL_HOST_PRIMARY` | Primary database host | `127.0.0.1` |
+| `DB_MYSQL_PORT_PRIMARY` | Primary database port | `3306` |
+| `DB_MYSQL_HOST_READONLY` | Read-only database host | empty |
+| `DB_MYSQL_PORT_READONLY` | Read-only database port | empty |
+| `DB_MYSQL_HOST_STANDBY` | Standby database host | empty |
+| `DB_MYSQL_PORT_STANDBY` | Standby database port | empty |
+| `DB_DEFAULT_USERNAME` | Database username | `root` |
+| `DB_DEFAULT_PASSWORD` | Database password | empty |
+| `DB_DEFAULT_DATABASE` | Database name | `flowra` |
+| `DB_MYSQL_HOST` | Fallback host if primary is not set | `127.0.0.1` |
+| `DB_MYSQL_PORT` | Fallback port if primary is not set | `3306` |
+| `DB_MYSQL_SSL` | Enable TLS/SSL (`true`/`false`) | `false` |
+| `DB_MYSQL_SSL_CA` | Optional CA certificate string or path | empty |
+| `DB_REMOTE_CLOUD` | Reserved for custom socket logic | `false` |
+
+## Cache and queue
+
+| Variable | Purpose | Default |
+| --- | --- | --- |
+| `CACHE_URL` | Cache server connection string | empty |
+| `QUEUE_URL` | Queue server connection string | empty |
+
+:::note Customize per project
+You can change defaults by editing `app/Config/*.js` files. Update `.env.example` after changes.
+:::

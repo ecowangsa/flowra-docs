@@ -1,0 +1,62 @@
+---
+title: 'Tugas Umum'
+description: 'Workflow harian saat bekerja dengan proyek Flowra.'
+---
+
+Halaman ini mencakup tugas-tugas umum dan lokasi yang relevan di scaffold Flowra.
+
+## Tambah modul baru
+
+```bash
+flowra make:module inventory
+```
+
+Perbarui `app/Modules/modules.manifest.js` jika ingin menonaktifkan atau mengurutkan modul.
+
+## Aktifkan atau nonaktifkan modul
+
+```bash
+flowra module:disable inventory
+flowra module:enable inventory
+```
+
+## Tambah middleware global
+
+Edit `app/Bootstrap/server.bootstrap.js` dan tambahkan middleware sebelum routes dipasang:
+
+```js
+app.use(myMiddleware());
+const routes = new HttpRouter(container).defineRoutes();
+app.use(routes);
+```
+
+## Tambah provider
+
+Buat provider di `app/Providers/` dan daftarkan di `app/Config/App.js`:
+
+```js
+providers: ['Providers/AppServiceProvider']
+```
+
+## Gunakan cache atau Redis
+
+Resolve cache manager dari container:
+
+```js
+const cache = container.resolve('cacheManager');
+const redis = await cache.client('redis');
+```
+
+## Tambah background queue
+
+Flowra mendukung BullMQ jika diinstal. Konfigurasikan di `queue` pada `app/Config` dan resolve lewat `queueFactory`.
+
+## Refresh `.env.example`
+
+```bash
+flowra env:example
+```
+
+:::tip Jaga tugas tetap repeatable
+Gunakan CLI daripada edit manual agar tim tetap konsisten.
+:::

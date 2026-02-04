@@ -1,0 +1,44 @@
+---
+title: 'Ringkasan Konfigurasi'
+description: 'Pahami bagaimana Flowra memuat konfigurasi dan di mana mendefinisikan pengaturan.'
+---
+
+Konfigurasi Flowra berbasis file dan environment. Pengaturan runtime berada di `app/Config` dan dimuat lewat helper `config()`.
+
+## Cara kerja config
+
+`core/Support/config.js` membaca file JavaScript di `app/Config` dan mengekspose API sederhana:
+
+```js
+const config = require('./core/Support/config');
+
+const port = config('app.port');
+const database = config('database');
+const all = config.all();
+```
+
+Kunci konfigurasi mengikuti pola `namespace.key`. Namespace mengacu ke file di `app/Config`.
+
+## File config default
+
+- `app/Config/App.js` - pengaturan app, opsi HTTP, providers
+- `app/Config/Database.js` - koneksi Knex dan pool
+- `app/Config/Cache.js` - cache stores dan default
+- `app/Config/Logger.js` - logging output dan transport
+- `app/Config/Model.js` - perilaku base model
+- `app/Config/Service.js` - helper base service dan akses database
+- `app/Config/Validation.js` - aturan validasi request
+
+## Environment variables
+
+Sebagian besar config berasal dari `.env`. Gunakan CLI untuk membuat template baru:
+
+```bash
+flowra env:example
+```
+
+Lihat [Environment Variables](./environment) untuk daftar lengkap.
+
+:::tip Simpan config dekat aplikasi
+Karena config berbasis file, tim bisa audit perubahan dengan mudah dan meninjau setting produksi lewat kode.
+:::

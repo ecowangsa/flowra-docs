@@ -1,0 +1,224 @@
+---
+title: 'Referensi Perintah CLI'
+description: 'Referensi lengkap untuk setiap perintah dan opsi Flowra CLI.'
+---
+
+Halaman ini mendokumentasikan semua perintah yang tersedia di `flowra`.
+
+## Penggunaan global
+
+```bash
+flowra <command> [options]
+```
+
+Jalankan `flowra list` untuk melihat semua perintah, atau `flowra <command> --help` untuk detail.
+
+## Setup proyek
+
+### `create-app <projectName>`
+Membuat scaffold proyek Flowra baru.
+
+Opsi:
+
+- `-f, --force` Menimpa file yang sudah ada saat target direktori tidak kosong.
+- `--framework-version <version>` Override versi Flowra CLI di `package.json`.
+
+Alias:
+
+- `create` (sama dengan `create-app`)
+
+Contoh:
+
+```bash
+flowra create-app my-api --framework-version 1.0.0
+```
+
+### `list`
+Menampilkan semua perintah yang terdaftar.
+
+## Perintah server
+
+### `serve`
+Menjalankan HTTP server menggunakan `APP_PORT` yang dikonfigurasi.
+
+Opsi:
+
+- `-p, --port <port>` Override port yang dikonfigurasi.
+- `--once` Menjalankan server lalu langsung shutdown setelah siap.
+
+### `serve:watch`
+Menjalankan server dengan hot reload menggunakan `nodemon`.
+
+Opsi:
+
+- `-p, --port <port>` Override port yang dikonfigurasi.
+
+## Routing
+
+### `route:list`
+Menampilkan routes yang terdaftar dari semua modul aktif.
+
+## Modules
+
+### `module:list`
+Menampilkan nama modul, status enabled, dan path dari manifest.
+
+### `module:enable <name>`
+Mengaktifkan modul berdasarkan nama kebab-case.
+
+### `module:disable <name>`
+Menonaktifkan modul.
+
+## Scaffolding
+
+### `make:module <name>`
+Generate scaffold modul dan memperbarui manifest.
+
+Opsi:
+
+- `--force` Menimpa direktori modul yang sudah ada.
+- `--controllers <controllers>` Daftar controller dipisahkan koma (contoh: `registrations,sessions`).
+
+### `make:model <name>`
+Generate model.
+
+Opsi:
+
+- `--db <alias>` Alias koneksi database.
+- `--table <name>` Override nama tabel.
+- `--module <module>` Modul target sebagai pemilik model.
+
+### `make:controller <name>`
+Generate controller di dalam modul yang sudah ada.
+
+Opsi:
+
+- `--module <module>` Modul target.
+
+### `make:service <name>`
+Generate service di dalam modul yang sudah ada.
+
+Opsi:
+
+- `--module <module>` Modul target.
+
+### `make:route <name>`
+Generate file route di dalam modul yang sudah ada.
+
+Opsi:
+
+- `--module <module>` Modul target.
+
+### `make:validator <name>`
+Generate validator Zod di dalam modul yang sudah ada.
+
+Opsi:
+
+- `--module <module>` Modul target.
+
+### `make:query <name>`
+Generate helper query di dalam modul yang sudah ada.
+
+Opsi:
+
+- `--module <module>` Modul target.
+
+### `make:resource <name>`
+Generate scaffold resource REST lengkap (modul + model + routes).
+
+Opsi:
+
+- `--db <alias>` Alias koneksi database.
+
+## Database
+
+### `db:migrate:make <name>`
+Membuat file migration.
+
+Opsi:
+
+- `--env <alias>` Alias database di `orm.cli.config.js`.
+
+### `db:migrate:latest`
+Menjalankan migration yang tertunda.
+
+Opsi:
+
+- `--env <alias>` Alias database di `orm.cli.config.js`.
+
+### `db:rollback`
+Rollback batch migration terbaru.
+
+Opsi:
+
+- `--env <alias>` Alias database di `orm.cli.config.js`.
+- `--all` Rollback semua batch.
+
+### `db:status`
+Menampilkan status migration.
+
+Opsi:
+
+- `--env <alias>` Alias database di `orm.cli.config.js`.
+
+### `db:seed:make <name>`
+Membuat file seed.
+
+Opsi:
+
+- `--env <alias>` Alias database di `orm.cli.config.js`.
+
+### `db:seed:run`
+Menjalankan seed.
+
+Opsi:
+
+- `--env <alias>` Alias database di `orm.cli.config.js`.
+
+## Environment
+
+### `env:example`
+Membuat ulang `.env.example` di proyek saat ini.
+
+### `env:check`
+Memvalidasi environment variables yang wajib. Exit code 1 jika ada yang hilang.
+
+## Configuration
+
+### `config:print`
+Menampilkan konfigurasi runtime yang aktif.
+
+Opsi:
+
+- `--namespace <namespace>` Batasi output ke namespace tertentu (mis. `app` atau `database`).
+
+## Health
+
+### `health:check`
+Memvalidasi koneksi database.
+
+Opsi:
+
+- `--json` Cetak output JSON untuk machine.
+
+## Cleanup
+
+### `clean:analyze`
+Analisis cleanup tanpa eksekusi. Menampilkan modul orphan dan target yang hilang.
+
+### `clean:prune`
+Menghapus file dan folder yang ditandai.
+
+Opsi:
+
+- `--yes` Konfirmasi penghapusan resource orphan.
+- `--force` Paksa penghapusan dengan semantik `rm -rf`.
+
+## Docs
+
+### `docs:generate`
+Generate dokumentasi awal untuk proyek Flowra saat ini.
+
+Opsi:
+
+- `-o, --output <file>` Path file output (default: `docs/overview.md`).

@@ -1,0 +1,237 @@
+---
+title: 'JWT Auth + File Uploads'
+description: 'Add JWT login/registration and a Multer-powered upload endpoint in Flowra.'
+---
+
+This example extends the Users module with **JWT authentication** and a **Multer upload** endpoint. It assumes you already have the `users` table from the Build Your First API guide.
+
+## 1. Install dependencies
+
+```bash
+npm install jsonwebtoken bcrypt multer
+```
+
+## 2. Configure JWT secret
+
+Add a secret to your environment:
+
+```bash
+JWT_SECRET=super-secret-value
+```
+
+## 3. Auth service (JWT + bcrypt)
+
+```js title="app/Modules/Users/Auth.service.js"
+const HttpError = require('../../Errors/HttpError');
+const jwt = require('jsonwebtoken');
+const bcrypt = require('bcrypt');
+
+class AuthService {
+  constructor({ models } = {}) {
+    this.usersModel = models.user;
+  }
+
+  async register(payload) {
+    const passwordHash = await bcrypt.hash(payload.password, 10);
+    const id = await this.usersModel.save({
+      name: payload.name,
+      email: payload.email,
+      password_hash: passwordHash,
+    });
+    return this.usersModel.getSingle(id);
+  }
+
+  async login({ email, password }) {
+    const user = await this.usersModel.findByEmail(email);
+    if (!user) {
+      throw new HttpError(401, 'Invalid credentials');
+    }
+
+    const valid = await bcrypt.compare(password, user.password_hash);
+    if (!valid) {
+      throw new HttpError(401, 'Invalid credentials');
+    }
+
+    const token = jwt.sign(
+      { id: user.id, email: user.email },
+      process.env.JWT_SECRET,
+      { expiresIn: '2h' }
+    );
+
+    return { token, user: { id: user.id, name: user.name, email: user.email } };
+  }
+}
+
+module.exports = AuthService;
+```
+
+## 4. Auth controller with validation
+
+```js title="app/Modules/Users/Auth.controller.js"
+const HttpError = require('../../Errors/HttpError');
+
+class AuthController {
+  constructor({ services, validationFactory } = {}) {
+    this.authService = services.auth;
+    this.validationFactory = validationFactory;
+  }
+
+  get registerRules() {
+    return {
+      name: { required: true },
+      email: { required: true, is_email: true },
+      password: { required: true, minLength: 8 },
+    };
+  }
+
+  get loginRules() {
+    return {
+      email: { required: true, is_email: true },
+      password: { required: true },
+    };
+  }
+
+  async register(req, res) {
+    const validator = this.validationFactory(this.registerRules);
+    const errors = await validator.validate(req.body);
+    if (errors.length > 0) {
+      throw new HttpError(422, 'Validation failed', errors);
+    }
+
+    const user = await this.authService.register(req.body);
+    return res.status(201).json(user);
+  }
+
+  async login(req, res) {
+    const validator = this.validationFactory(this.loginRules);
+    const errors = await validator.validate(req.body);
+    if (errors.length > 0) {
+      throw new HttpError(422, 'Validation failed', errors);
+    }
+
+    const result = await this.authService.login(req.body);
+    return res.json(result);
+  }
+}
+
+module.exports = AuthController;
+```
+
+## 5. JWT middleware
+
+```js title="app/Middleware/auth.middleware.js"
+const jwt = require('jsonwebtoken');
+const HttpError = require('../Errors/HttpError');
+
+module.exports = function authMiddleware(req, _res, next) {
+  const header = req.headers.authorization || '';
+  const token = header.replace('Bearer ', '').trim();
+
+  if (!token) {
+    return next(new HttpError(401, 'Missing auth token'));
+  }
+
+  try {
+    req.user = jwt.verify(token, process.env.JWT_SECRET);
+    return next();
+  } catch (error) {
+    return next(new HttpError(401, 'Invalid auth token'));
+  }
+};
+```
+
+## 6. Upload controller (Multer)
+
+```js title="app/Modules/Users/Uploads.controller.js"
+class UploadsController {
+  async create(req, res) {
+    return res.status(201).json({
+      file: {
+        originalName: req.file.originalname,
+        mimeType: req.file.mimetype,
+        size: req.file.size,
+        path: req.file.path,
+      },
+    });
+  }
+}
+
+module.exports = UploadsController;
+```
+
+## 7. Routes + container wiring
+
+```js title="app/Modules/Users/users.routes.js"
+const multer = require('multer');
+const authMiddleware = require('../../Middleware/auth.middleware');
+
+const upload = multer({ dest: 'storage/uploads' });
+
+function registerUsersRoutes({ router, container } = {}) {
+  if (!router || !container) {
+    return router;
+  }
+
+  const authController = container.resolve('modules.users.controllers.auth');
+  const uploadsController = container.resolve('modules.users.controllers.uploads');
+
+  router.post('/auth/register', authController.register.bind(authController));
+  router.post('/auth/login', authController.login.bind(authController));
+
+  router.post(
+    '/uploads',
+    authMiddleware,
+    upload.single('file'),
+    uploadsController.create.bind(uploadsController)
+  );
+
+  return router;
+}
+
+module.exports = registerUsersRoutes;
+```
+
+```js title="app/Modules/Users/users.container.js"
+const { asClass, asValue } = require('awilix');
+const AuthService = require('./Auth.service');
+const AuthController = require('./Auth.controller');
+const UploadsController = require('./Uploads.controller');
+const registerUsersRoutes = require('./users.routes');
+
+module.exports = (scope) => {
+  scope.register({
+    services: {
+      auth: asClass(AuthService).singleton(),
+    },
+    controllers: {
+      auth: asClass(AuthController).singleton(),
+      uploads: asClass(UploadsController).singleton(),
+    },
+    routes: asValue(registerUsersRoutes),
+  });
+};
+```
+
+## 8. Try it with curl
+
+```bash
+# Register
+curl -X POST http://localhost:3387/auth/register \
+  -H 'Content-Type: application/json' \
+  -d '{"name":"Rani","email":"rani@flowra.dev","password":"secret123"}'
+
+# Login
+curl -X POST http://localhost:3387/auth/login \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"rani@flowra.dev","password":"secret123"}'
+
+# Upload (replace TOKEN)
+curl -X POST http://localhost:3387/uploads \
+  -H 'Authorization: Bearer TOKEN' \
+  -F 'file=@/path/to/avatar.png'
+```
+
+:::tip Notes
+- Create the folder `storage/uploads` before testing uploads.
+- For production, use a storage provider (S3, GCS) instead of local disk.
+:::

@@ -1,0 +1,86 @@
+---
+title: 'Routes & Controllers'
+description: 'Definisikan Express routes di dalam modul dan resolve controller dari container.'
+---
+
+Route Flowra berada di dalam modul. HTTP router akan memeriksa semua modul yang aktif dan memasang routes ke Express.
+
+## Mendefinisikan routes
+
+File route menerima Express router dan container:
+
+```js title="app/Modules/Users/users.routes.js"
+'use strict';
+const group = require('routergroup');
+
+function registerUsersRoutes({ router, container } = {}) {
+  if (!router || !container) {
+    return router;
+  }
+
+  const controller = container.resolve('modules.users.controllers.main');
+
+  router.use(
+    group('/users', (router) => {
+      router.get('/list', controller.list.bind(controller));
+      router.post('/create', controller.create.bind(controller));
+    })
+  );
+
+  return router;
+}
+
+module.exports = registerUsersRoutes;
+```
+
+Flowra memakai `routergroup` untuk menjaga prefix route konsisten, tetapi Anda bisa memakai Express routes biasa.
+
+## Controllers
+
+Controller mengenkapsulasi logic request. Dependency diberikan lewat constructor:
+
+```js title="app/Modules/Users/Users.controller.js"
+const BaseController = require('../Shared/controllers/BaseController');
+const HttpError = require('../../Errors/HttpError');
+
+class UsersController extends BaseController {
+  constructor({ logger, usersService } = {}) {
+    super({ logger });
+    this.logger = logger;
+    this.usersService = usersService;
+  }
+
+  list = async (req, res, next) => {
+    try {
+      const users = await this.usersService.list();
+      res.status(200).json({ message: 'Success', data: users });
+    } catch (error) {
+      if (!(error instanceof HttpError)) {
+        this.logger?.error('http.users.list.failed', { message: error.message });
+      }
+      next(error);
+    }
+  };
+}
+
+module.exports = UsersController;
+```
+
+## Render view
+
+Modul juga bisa merender view. Misalnya, modul Welcome mengembalikan template EJS:
+
+```js title="app/Modules/Welcome/Welcome.controller.js"
+class WelcomeController {
+  async index(req, res, next) {
+    try {
+      const context = await this.welcomeService.getLandingPageContext();
+      return res.render('welcome', context);
+    } catch (error) {
+      next(error);
+    }
+  }
+}
+```
+
+Flowra menjaga layer routing tetap tipis agar controller dan service fokus pada business logic.

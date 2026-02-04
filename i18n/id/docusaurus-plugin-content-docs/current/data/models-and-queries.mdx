@@ -1,0 +1,150 @@
+---
+title: 'Models & Queries'
+description: 'Gunakan Flowra models dan query classes untuk mengenkapsulasi akses database.'
+---
+
+Flowra models mewarisi base class `Service` yang membungkus Knex dan menyediakan helper untuk read, write, dan timestamps.
+
+## Base class Model
+
+`app/Config/Model.js` memperluas `Service` dan menyediakan default untuk table name, primary key, dan allowed fields.
+
+```js title="app/Modules/Users/Users.model.js"
+const Model = require('../../Config/Model');
+
+class UsersModel extends Model {
+  constructor(connection = 'default') {
+    super(connection);
+    this.setTable('users');
+    this.setPrimaryKey('id');
+    this.setAllowedFields(['id', 'username', 'email', 'password']);
+    this.setTimestamps(true);
+    this.setSoftDelete(false);
+  }
+
+  async findAll() {
+    return this.read().select('*').whereNull('deletedAt');
+  }
+}
+
+module.exports = UsersModel;
+```
+
+## Helper di Service
+
+`Service` menyediakan:
+
+- `read()` dan `write()` untuk membangun query
+- `save()` dan `saveBulk()` untuk insert
+- `update()` dan `delete()` untuk mutasi
+- `readKnex()` untuk memakai read replica bila tersedia
+
+## Query Builder (Knex)
+
+**Query Builder** Flowra adalah query builder Knex yang diakses melalui `read()` dan `write()`. Artinya Anda bisa memakai seluruh API Knex sambil menjaga alias koneksi tetap konsisten.
+
+Karena model Flowra sudah mengatur `this.tableName`, Anda **tidak** perlu memanggil `.from('table')` untuk model yang sama kecuali saat melakukan join atau query lintas tabel.
+
+### Query read
+
+Gunakan `read()` untuk select dan reporting:
+
+```js title="app/Modules/Users/Users.model.js"
+getAll({ search, limit = 25, offset = 0 } = {}) {
+  const query = this.read()
+    .select('id', 'name', 'email', 'createdAt')
+    .orderBy('createdAt', 'desc')
+    .limit(limit)
+    .offset(offset);
+
+  if (search) {
+    query.where((builder) => {
+      builder
+        .where('email', 'like', `%${search}%`)
+        .orWhere('name', 'like', `%${search}%`);
+    });
+  }
+
+  return query;
+}
+
+getSingle(id) {
+  return this.read()
+    .select('id', 'name', 'email', 'createdAt')
+    .where({ id })
+    .first();
+}
+```
+
+### Join dan agregasi
+
+Knex mendukung join dan agregasi untuk kebutuhan read yang lebih kaya:
+
+```js title="app/Modules/Users/Users.model.js"
+getUsersWithTeams() {
+  return this.read()
+    .select('users.id', 'users.name', 'teams.name as teamName')
+    .leftJoin('teams', 'teams.id', 'users.teamId')
+    .orderBy('users.name', 'asc');
+}
+```
+
+### Write dan transaksi
+
+Gunakan `write()` saat butuh mutasi. Bungkus perubahan kompleks dalam transaksi:
+
+```js title="app/Modules/Users/Users.model.js"
+async updateProfile(id, payload) {
+  const trx = await this.write().transaction();
+
+  try {
+    await this.write().transacting(trx).update(payload).where({ id });
+    await trx.commit();
+    return this.getSingle(id);
+  } catch (error) {
+    await trx.rollback();
+    throw error;
+  }
+}
+```
+
+Karena Query Builder ini adalah Knex, Anda bisa memakai pola Knex yang sudah familiar tanpa keluar dari layer model Flowra.
+
+## Query classes
+
+Query adalah class ringan untuk operasi read tertentu:
+
+```js title="app/Modules/Welcome/SystemInfo.query.js"
+class SystemInfoQuery {
+  async execute() {
+    return {
+      environment: process.env.NODE_ENV || 'development',
+      nodeVersion: process.version,
+      uptime: process.uptime(),
+    };
+  }
+}
+
+module.exports = SystemInfoQuery;
+```
+
+## Wiring models dan queries
+
+Daftarkan models dan queries di module container:
+
+```js title="app/Modules/Users/users.container.js"
+const { asClass } = require('awilix');
+const UsersModel = require('./Users.model');
+
+module.exports = (scope) => {
+  scope.register({
+    models: {
+      user: asClass(UsersModel).singleton(),
+    },
+  });
+};
+```
+
+:::tip Jaga read dan write tetap jelas
+Gunakan query classes untuk reporting dan services untuk business logic. Ini membuat kode tetap jelas dan mudah dites.
+:::
